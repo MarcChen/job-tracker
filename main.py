@@ -1,13 +1,19 @@
 from src.selenium_script import JobScraper
 from src.notion_client import NotionClient
+from src.sms_alert import SMSAPI
 import os
 
 if __name__ == "__main__":
     DATABASE_ID = os.getenv("DATABASE_ID")
     NOTION_API = os.getenv("NOTION_API")
+    FREE_MOBILE_USER_ID=os.getenv("FREE_MOBILE_USER_ID")
+    FREE_MOBILE_API_KEY=os.getenv("FREE_MOBILE_API_KEY")
+
 
     assert DATABASE_ID, "DATABASE_ID environment variable is not set."
     assert NOTION_API, "NOTION_API environment variable is not set."
+    assert FREE_MOBILE_USER_ID, "FREE_MOBILE_USER_ID environment variable is not set."
+    assert FREE_MOBILE_API_KEY, "FREE_MOBILE_API_KEY environment variable is not set."
 
     client = NotionClient(NOTION_API, DATABASE_ID)
 
@@ -33,6 +39,8 @@ if __name__ == "__main__":
     titles = client.get_page_titles()
     print(f"Titles in the database: {titles}")
 
+    sms_client = SMSAPI(FREE_MOBILE_USER_ID, FREE_MOBILE_API_KEY)
+    # sms_client.send_sms("Hello from VIE-Tracker!")
 
     # url = "https://mon-vie-via.businessfrance.fr/offres/recherche?query=&specializationsIds=212&specializationsIds=24&missionsTypesIds=1&gerographicZones=4"
     # scraper = JobScraper(url)
