@@ -1,0 +1,99 @@
+name: Versioning and Changelog Update
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  bump-version-and-update-changelog:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout repository
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Get current version
+      - name: Get current version
+        id: current_version
+        run: |
+          if [ ! -f VERSION ]; then echo "VERSION file not found"; exit 1; fi
+          echo "version=$(cat VERSION)" >> $GITHUB_ENV
+
+      # Determine the bump type from PR labels
+      - name: Determine bump type from labels
+        id: determine_version
+        run: |
+          labels=$(echo '${{ toJson(github.event.pull_request.labels) }}' | jq -r '.[].name')
+          if echo "$labels" | grep -q "major"; then
+            echo "bump_type=major" >> $GITHUB_ENV
+          elif echo "$labels" | grep -q "minor"; then
+            echo "bump_type=minor" >> $GITHUB_ENV
+          elif echo "$labels" | grep -q "patch"; then
+            echo "bump_type=patch" >> $GITHUB_ENV
+          else
+            echo "No valid label (major, minor, patch) found."
+            exit 1
+          fi
+
+      # Increment the version
+      - name: Increment version
+        id: increment_version
+        run: |
+          major=$(echo "${{ env.version }}" | cut -d. -f1)
+          minor=$(echo "${{ env.version }}" | cut -d. -f2)
+          patch=$(echo "${{ env.version }}" | cut -d. -f3)
+
+          case "${{ env.bump_type }}" in
+            major)
+              new_version="$((major + 1)).0.0"
+              ;;
+            minor)
+              new_version="$major.$((minor + 1)).0"
+              ;;
+            patch)
+              new_version="$major.$minor.$((patch + 1))"
+              ;;
+            *)
+              echo "Invalid bump type: ${{ env.bump_type }}"
+              exit 1
+              ;;
+          esac
+
+          echo "new_version=${new_version}" >> $GITHUB_ENV
+          echo "${new_version}" > VERSION
+
+      # Update Changelog
+      - name: Update Changelog
+        run: |
+          set -e
+          cat << 'EOF' > pr_body_raw.txt
+          ${{ github.event.pull_request.body }}
+          EOF
+          sed -E 's/`([^`]*)`/\1/g' pr_body_raw.txt
+          pr_body="$(cat pr_body_raw.txt)"
+          pr_title="${{ github.event.pull_request.title }}"
+          pr_author="${{ github.event.pull_request.user.login }}"
+          pr_number="${{ github.event.pull_request.number }}"
+          date="$(date '+%Y-%m-%d')"
+
+          echo "## [${{ env.new_version }}] - $date" >> CHANGELOG.md
+          echo "- Merged PR #${pr_number} by @${pr_author}: ${pr_title}" >> CHANGELOG.md
+          echo "${pr_body}" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+
+      # Commit and push the updated version and changelog
+      - name: Commit and push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add VERSION CHANGELOG.md
+          git commit -m "Bump version to ${{ env.new_version }} and update changelog"
+          git push origin main
+
+      # Create and push a new tag
+      - name: Create and push tag
+        run: |
+          git tag -a "v${{ env.new_version }}" -m "Version ${{ env.new_version }}"
+          git push origin "v${{ env.new_version }}"
