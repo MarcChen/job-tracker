@@ -1,5 +1,6 @@
 import requests
 from typing import Dict, List, Optional
+import json
 
 class NotionClient:
     def __init__(self, notion_api_key: str, database_id: str):
@@ -62,11 +63,25 @@ class NotionClient:
             print(f"Page with title '{title}' already exists. Skipping creation.")
             return None
 
-        url = "https://api.notion.com/v1/pages"
+        # Convert payload to match Notion database schema
         payload = {
             "parent": {"database_id": self.database_id},
-            "properties": properties
+            "properties": {
+                "Title": {
+                    "title": [
+                        {"type": "text", "text": {"content": properties["Title"]["title"][0]["text"]["content"]}}
+                    ]
+                },
+                "Candidates": {"number": int(properties["Candidates"]["number"])},
+                "Views": {"number": int(properties["Views"]["number"])},
+                "ContractType": {"select": {"name": properties["ContractType"]["select"]["name"]}},
+                "Company": {"select": {"name": properties["Company"]["select"]["name"]}},
+                "Location": {"select": {"name": properties["Location"]["select"]["name"]}},
+                "Duration": {"select": {"name": properties["Duration"]["select"]["name"]}}
+            }
         }
+
+        url = "https://api.notion.com/v1/pages"
 
         try:
             response = requests.post(url, headers=self.headers, json=payload)
@@ -75,7 +90,10 @@ class NotionClient:
             return response.json()
         except requests.exceptions.RequestException as e:
             print(f"Error creating page '{title}': {e}")
+            print(f"Response Content: {response.text if 'response' in locals() else 'No response'}")
+            print(f"Payload: {json.dumps(payload, indent=2)}")
             return None
+
 
     def get_page_titles(self) -> List[str]:
         """
