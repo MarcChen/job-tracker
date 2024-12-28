@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch, MagicMock
-from sms_api import SMSAPI, MissingParameter, TooManySMS, ServiceNotEnabled, ServerError  # Adjust import as needed
+from src.sms_alert import SMSAPI, MissingParameter, TooManySMS, ServiceNotEnabled, ServerError  # Adjust import as needed
 
 
 @pytest.fixture
