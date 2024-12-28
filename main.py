@@ -18,28 +18,23 @@ if __name__ == "__main__":
     notion_client = NotionClient(NOTION_API, DATABASE_ID)
     sms_client = SMSAPI(FREE_MOBILE_USER_ID, FREE_MOBILE_API_KEY)
 
-    # URL of the job offers page
     url = "https://mon-vie-via.businessfrance.fr/offres/recherche?query=&specializationsIds=212&specializationsIds=24&missionsTypesIds=1&gerographicZones=4"
     scraper = JobScraper(url)
 
     try:
-        # Step 1: Scrape job data
         print("Scraping job offers...")
         data = scraper.scrape()
         print(f"Total offers found: {data['total_offers']}")
 
-        # Step 2: Process each job offer
         with Progress() as progress:
             task = progress.add_task("Processing job offers...", total=len(data['offers']))
 
             for offer in data['offers']:
                 title = offer['Title']
 
-                # Step 3: Check if the job already exists in Notion
                 if notion_client.title_exists(title):
                     progress.console.log(f"[yellow]Job '{title}' already exists. Skipping...[/yellow]")
                 else:
-                    # Step 4: Send SMS with job information
                     sms_message = (
                         f"New Job Alert!\n"
                         f"Title: {offer['Title']}\n"
@@ -50,9 +45,8 @@ if __name__ == "__main__":
                         f"Views: {offer['Views']}\n"
                         f"Candidates: {offer['Candidates']}\n"
                     )
-                    # sms_client.send_sms(sms_message)
+                    sms_client.send_sms(sms_message)
 
-                    # Step 5: Save the job offer to Notion
                     job_properties = {
                         "Title": {
                             "title": [
@@ -68,11 +62,9 @@ if __name__ == "__main__":
                     }
                     notion_client.create_page(job_properties)
                     progress.console.log(f"[green]Job '{title}' added to Notion and SMS sent![/green]")
-                    # break
 
                 progress.advance(task)
             
 
     finally:
-        # Step 6: Clean up the scraper
         scraper.close_driver()
