@@ -32,3 +32,21 @@ Changes to Docker image version:
 
 * [`.github/workflows/run-container.yml`](diffhunk://#diff-9d8fa071698624d0a009b95095bdbb9802888955407a82532e59666535968260L32-R35): Changed the Docker image version from `0.0.1` to `latest` in the `run-container` job.
 
+## [1.1.0] - 2024-12-28
+- Merged PR #4 by @MarcChen: Feat/enhance workflows
+# Enhancements to GitHub Actions Workflows for Docker Image Management and Multi-Platform Builds
+
+This pull request introduces improvements to the Docker image handling process and adds support for multi-platform builds in the GitHub Actions workflows. The updates address issues encountered with self-hosted runners and optimize the build and pull processes.
+
+## Key Changes:
+### **Improved Docker Image Handling**
+- **Workflow:** [`.github/workflows/run-container.yml`](diffhunk://#diff-9d8fa071698624d0a009b95095bdbb9802888955407a82532e59666535968260L21-R34)
+  - Added a check to determine if the Docker image exists locally on the self-hosted runner before pulling it, reducing redundant pulls and improving efficiency.
+
+### **Added Multi-Platform Build Support**
+- **Workflow:** [`.github/workflows/versioning.yml`](diffhunk://#diff-a939aacba1dba4141eda9eda616ff5e54462b324fbaebe0f8848c06964e67c68L105-R116)
+  - Integrated Docker Buildx for multi-platform builds.
+  - Updated the build and push steps to target both `linux/amd64` and `linux/arm64` platforms, ensuring broader compatibility and deployment options.
+
+These changes streamline the CI/CD pipeline, enhance support for diverse environments, and improve reliability when using self-hosted runners.
+
