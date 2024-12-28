@@ -6,15 +6,26 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
 import random
-
+from typing import List, Dict, Union
 
 class JobScraper:
-    def __init__(self, url):
+    def __init__(self, url: str):
+        """
+        Initialize the JobScraper class.
+
+        Args:
+            url (str): The URL of the job listing page to scrape.
+        """
         self.url = url
         self.driver = self._setup_driver()
 
-    def _setup_driver(self):
-        """Set up the Selenium WebDriver with necessary options."""
+    def _setup_driver(self) -> webdriver.Chrome:
+        """
+        Set up the Selenium WebDriver with necessary options.
+
+        Returns:
+            webdriver.Chrome: Configured Selenium WebDriver instance.
+        """
         chrome_options = Options()
         chrome_options.add_argument('--no-sandbox')
         chrome_options.add_argument('--headless')
@@ -25,8 +36,10 @@ class JobScraper:
         service = Service('/usr/bin/chromedriver')
         return webdriver.Chrome(service=service, options=chrome_options)
 
-    def load_all_offers(self):
-        """Load all offers by repeatedly clicking 'Voir Plus d'Offres' with added randomness."""
+    def load_all_offers(self) -> None:
+        """
+        Load all offers by repeatedly clicking 'Voir Plus d'Offres' with added randomness.
+        """
         self.driver.get(self.url)
         time.sleep(random.uniform(3, 6))  # Randomized initial wait
 
@@ -62,8 +75,13 @@ class JobScraper:
 
         print("Finished loading all available offers.")
 
-    def extract_offers(self):
-        """Extract offers data from the loaded page."""
+    def extract_offers(self) -> List[Dict[str, Union[str, int]]]:
+        """
+        Extract offers data from the loaded page.
+
+        Returns:
+            List[Dict[str, Union[str, int]]]: A list of dictionaries containing offer details.
+        """
         offers = []
         offer_elements = self.driver.find_elements(By.CLASS_NAME, "figure-item")
 
@@ -76,8 +94,8 @@ class JobScraper:
                 details = offer.find_elements(By.TAG_NAME, "li")
                 contract_type = details[0].text if len(details) > 0 else "N/A"
                 duration = details[1].text if len(details) > 1 else "N/A"
-                views = details[2].text.split()[0] if len(details) > 2 else "0"
-                candidates = details[3].text.split()[0] if len(details) > 3 else "0"
+                views = int(details[2].text.split()[0]) if len(details) > 2 else 0
+                candidates = int(details[3].text.split()[0]) if len(details) > 3 else 0
 
                 offers.append({
                     "Title": title,
@@ -92,18 +110,28 @@ class JobScraper:
                 print(f"Error extracting data for an offer: {e}")
         return offers
 
-    def extract_total_offers(self):
-        """Extract the total offers count displayed on the page."""
+    def extract_total_offers(self) -> Union[str, int]:
+        """
+        Extract the total offers count displayed on the page.
+
+        Returns:
+            Union[str, int]: The total offers count as an integer, or 'Unknown' if an error occurs.
+        """
         try:
             time.sleep(random.uniform(1, 3))  # Randomized delay before accessing total offers count
-            total_offers = self.driver.find_element(By.CLASS_NAME, "count").text.split()[0]
+            total_offers = int(self.driver.find_element(By.CLASS_NAME, "count").text.split()[0])
             return total_offers
         except Exception as e:
             print(f"Error retrieving total offers count: {e}")
             return "Unknown"
 
-    def scrape(self):
-        """Main method to perform the scraping."""
+    def scrape(self) -> Dict[str, Union[str, List[Dict[str, Union[str, int]]]]]:
+        """
+        Main method to perform the scraping.
+
+        Returns:
+            Dict[str, Union[str, List[Dict[str, Union[str, int]]]]]: A dictionary containing the total offers count and offers data.
+        """
         self.load_all_offers()
         offers = self.extract_offers()
         total_offers = self.extract_total_offers()
@@ -112,28 +140,8 @@ class JobScraper:
             "offers": offers
         }
 
-    def close_driver(self):
-        """Close the Selenium WebDriver."""
+    def close_driver(self) -> None:
+        """
+        Close the Selenium WebDriver.
+        """
         self.driver.quit()
-
-
-if __name__ == "__main__":
-    url = 'https://mon-vie-via.businessfrance.fr/offres/recherche?query=&specializationsIds=212&specializationsIds=24&missionsTypesIds=1&gerographicZones=4'
-    scraper = JobScraper(url)
-
-    try:
-        data = scraper.scrape()
-        print(f"Total offers found: {data['total_offers']}")
-        print(f"Scraped {len(data['offers'])} offers.")
-        
-        for offer in data['offers']:
-            print(f"Title: {offer['Title']}\n"
-                  f"Company: {offer['Company']}\n"
-                  f"Location: {offer['Location']}\n"
-                  f"Contract Type: {offer['Contract Type']}\n"
-                  f"Duration: {offer['Duration']}\n"
-                  f"Views: {offer['Views']}\n"
-                  f"Candidates: {offer['Candidates']}\n"
-                  "-----------------------------")
-    finally:
-        scraper.close_driver()
