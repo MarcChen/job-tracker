@@ -34,6 +34,9 @@ jobs:
         if: env.skip_pull == 'false'
         run: docker pull ghcr.io/marcchen/vie-tracker:latest
 
+      - name: Clean up stopped Docker containers
+        run: docker container prune -f
+
       - name: Run the container
         env:
           NOTION_API: ${{ secrets.NOTION_API }}
