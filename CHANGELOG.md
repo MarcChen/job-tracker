@@ -14,3 +14,9 @@ This pull request introduces significant changes to the repository, including ne
 ### Documentation:
 * [`README.md`](diffhunk://#diff-b335630551682c19a781afebcf4d07bf978fb1f8ac04c6bf87428ed5106870f5L1-R113): Updated the README to reflect the new project name "VIE-Tracker," provide an overview of the project, and include setup and usage instructions.
 
+## [1.0.1] - 2024-12-28
+- Merged PR #2 by @MarcChen: update versioning workflow with new PAT
+This pull request includes a small change to the `.github/workflows/versioning.yml` file. The change updates the secret used for logging into the GitHub Container Registry to use `GHCR_PAT_WRITE_PACKAGE` instead of `GHCR_PAT`.
+
+* [`.github/workflows/versioning.yml`](diffhunk://#diff-a939aacba1dba4141eda9eda616ff5e54462b324fbaebe0f8848c06964e67c68L103-R103): Updated the secret for Docker login to `GHCR_PAT_WRITE_PACKAGE` for improved security.
+
