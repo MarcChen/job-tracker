@@ -1,0 +1,32 @@
+name: Run Selenium Python App
+
+on:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: '0 0 */2 * *'
+
+jobs:
+  run-container:
+    runs-on: self-hosted
+
+    steps:
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Pull Docker image
+        run: docker pull ghcr.io/marcchen/vie-tracker:latest
+
+      - name: Run the container
+        env:
+          NOTION_API: ${{ secrets.NOTION_API }}
+          DATABASE_ID: ${{ secrets.DATABASE_ID }}
+          FREE_MOBILE_USER_ID: ${{ secrets.FREE_MOBILE_USER_ID }}
+          FREE_MOBILE_API_KEY: ${{ secrets.FREE_MOBILE_API_KEY }}
+        run: |
+          docker run -e NOTION_API=$NOTION_API \
+                     -e DATABASE_ID=$DATABASE_ID \
+                     -e FREE_MOBILE_USER_ID=$FREE_MOBILE_USER_ID \
+                     -e FREE_MOBILE_API_KEY=$FREE_MOBILE_API_KEY \
+                     ghcr.io/marcchen/vie-tracker:0.0.1
