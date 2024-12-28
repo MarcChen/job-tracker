@@ -1,11 +1,14 @@
 name: Run Selenium Python App
 
 on:
-  push:
-    branches:
-      - main
+  workflow_run:
+    workflows: ["Versioning, Tagging, and Docker Image Push"]
+    types:
+      - completed
   schedule:
     - cron: '0 0 */2 * *'
+      branches:
+        - main
 
 jobs:
   run-container:
@@ -29,4 +32,4 @@ jobs:
                      -e DATABASE_ID=$DATABASE_ID \
                      -e FREE_MOBILE_USER_ID=$FREE_MOBILE_USER_ID \
                      -e FREE_MOBILE_API_KEY=$FREE_MOBILE_API_KEY \
-                     ghcr.io/marcchen/vie-tracker:0.0.1
+                     ghcr.io/marcchen/vie-tracker:latest
