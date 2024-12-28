@@ -102,10 +102,15 @@ jobs:
       - name: Log in to GitHub Container Registry
         run: echo "${{ secrets.GHCR_PAT_WRITE_PACKAGE }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-      # Build and push Docker image with version and latest tags
+      # Build and push Docker image with multi-platform support
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
       - name: Build and push Docker image
         run: |
-          docker build -t ghcr.io/marcchen/vie-tracker:${{ env.new_version }} .
-          docker tag ghcr.io/marcchen/vie-tracker:${{ env.new_version }} ghcr.io/marcchen/vie-tracker:latest
-          docker push ghcr.io/marcchen/vie-tracker:${{ env.new_version }}
-          docker push ghcr.io/marcchen/vie-tracker:latest
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            --push \
+            --tag ghcr.io/marcchen/vie-tracker:${{ env.new_version }} \
+            --tag ghcr.io/marcchen/vie-tracker:latest \
+            .
