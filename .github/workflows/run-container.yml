@@ -1,9 +1,10 @@
 name: Run Selenium Python App
 
 on:
-  push:
-    branches:
-      - main
+  workflow_run:
+    workflows: ["Versioning, Tagging, and Docker Image Push"]
+    types:
+      - completed
   schedule:
     - cron: '0 0 */2 * *'
 
