@@ -20,10 +20,6 @@ jobs:
           pip install -r requirements.txt
           pip install pytest
 
-      - name: Set PYTHONPATH
-        run: |
-          export PYTHONPATH=$PYTHONPATH:$GITHUB_WORKSPACE/src
-
       - name: Run tests
         run: |
           pytest --verbose
