@@ -20,3 +20,15 @@ This pull request includes a small change to the `.github/workflows/versioning.y
 
 * [`.github/workflows/versioning.yml`](diffhunk://#diff-a939aacba1dba4141eda9eda616ff5e54462b324fbaebe0f8848c06964e67c68L103-R103): Updated the secret for Docker login to `GHCR_PAT_WRITE_PACKAGE` for improved security.
 
+## [1.0.2] - 2024-12-28
+- Merged PR #3 by @MarcChen: Feat/enhance workflows
+This pull request includes changes to the `.github/workflows/run-container.yml` file to update the workflow triggers and the Docker image version used in the `run-container` job.
+
+Changes to workflow triggers:
+
+* [`.github/workflows/run-container.yml`](diffhunk://#diff-9d8fa071698624d0a009b95095bdbb9802888955407a82532e59666535968260L4-R11): Updated the workflow to trigger on completion of the "Versioning, Tagging, and Docker Image Push" workflow instead of on push to the main branch.
+
+Changes to Docker image version:
+
+* [`.github/workflows/run-container.yml`](diffhunk://#diff-9d8fa071698624d0a009b95095bdbb9802888955407a82532e59666535968260L32-R35): Changed the Docker image version from `0.0.1` to `latest` in the `run-container` job.
+
