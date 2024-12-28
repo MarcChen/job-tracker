@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch, MagicMock
-from src.notion_client import NotionClient  # Adjust the import based on your file structure
+from notion_client import NotionClient 
 
 
 @pytest.fixture
