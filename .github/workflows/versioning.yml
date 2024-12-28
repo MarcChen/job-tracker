@@ -1,4 +1,4 @@
-name: Versioning and Changelog Update
+name: Versioning, Tagging, and Docker Image Push
 
 on:
   pull_request:
@@ -97,3 +97,15 @@ jobs:
         run: |
           git tag -a "v${{ env.new_version }}" -m "Version ${{ env.new_version }}"
           git push origin "v${{ env.new_version }}"
+
+      # Log in to GitHub Container Registry
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      # Build and push Docker image with version and latest tags
+      - name: Build and push Docker image
+        run: |
+          docker build -t ghcr.io/marcchen/vie-tracker:${{ env.new_version }} .
+          docker tag ghcr.io/marcchen/vie-tracker:${{ env.new_version }} ghcr.io/marcchen/vie-tracker:latest
+          docker push ghcr.io/marcchen/vie-tracker:${{ env.new_version }}
+          docker push ghcr.io/marcchen/vie-tracker:latest
