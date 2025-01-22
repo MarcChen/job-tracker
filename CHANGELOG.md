@@ -50,3 +50,26 @@ This pull request introduces improvements to the Docker image handling process a
 
 These changes streamline the CI/CD pipeline, enhance support for diverse environments, and improve reliability when using self-hosted runners.
 
+## [1.2.0] - 2025-01-22
+- Merged PR #5 by @MarcChen: Feat/update url wider scope
+# Pull Request Description
+
+This pull request introduces several key improvements to the functionality and performance of the codebase. The most significant changes include updates to the `main.py` script to enhance job offer processing, modifications to the `Dockerfile` to optimize the container setup, and an adjustment to the workflow schedule.
+
+### Enhancements to Job Offer Processing:
+
+- **Wider Web Query and Local Filtering:**
+  - [`main.py`](diffhunk://#diff-b10564ab7d2c520cdd0243874879fb0a782862c3c902ab535faabe57d5a505e1L21-R22): Modified the URL used by the `JobScraper` to search for job offers with a broader query, as the filtering on the webpage was not functioning effectively. Instead, filtering is now handled locally in the `main.py` script.
+  - [`main.py`](diffhunk://#diff-b10564ab7d2c520cdd0243874879fb0a782862c3c902ab535faabe57d5a505e1L30-R40): Added a filter to skip job offers that do not contain the word "data" in the title, along with a log message for skipped offers.
+  - [`main.py`](diffhunk://#diff-b10564ab7d2c520cdd0243874879fb0a782862c3c902ab535faabe57d5a505e1R55): Introduced a `time.sleep(1)` call after sending an SMS to prevent rate-limiting issues.
+
+### Streamlining Container Setup:
+
+- **Dockerfile Optimization:**
+  - [`Dockerfile`](diffhunk://#diff-dd2c0eb6ea5cfc6c4bd4eac30934e2d5746747af48fef6da689e85b752f39557L6-L13): Removed the redundant installation of Python and pip, as the base image now includes Python support. Updated the command to run the Python script using `python3`.
+
+### Workflow Schedule Adjustment:
+
+- **Increased Workflow Frequency:**
+  - [`.github/workflows/run-container.yml`](diffhunk://#diff-9d8fa071698624d0a009b95095bdbb9802888955407a82532e59666535968260L9-R9): Changed the schedule to run the workflow daily instead of every two days.
+
