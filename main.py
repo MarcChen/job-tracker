@@ -3,6 +3,7 @@ from src.notion_client import NotionClient
 from src.sms_alert import SMSAPI
 from rich.progress import Progress
 import os
+import time
 
 if __name__ == "__main__":
     DATABASE_ID = os.getenv("DATABASE_ID")
@@ -18,7 +19,7 @@ if __name__ == "__main__":
     notion_client = NotionClient(NOTION_API, DATABASE_ID)
     sms_client = SMSAPI(FREE_MOBILE_USER_ID, FREE_MOBILE_API_KEY)
 
-    url = "https://mon-vie-via.businessfrance.fr/offres/recherche?query=&specializationsIds=212&specializationsIds=24&missionsTypesIds=1&gerographicZones=4"
+    url = "https://mon-vie-via.businessfrance.fr/offres/recherche?query=Data"
     scraper = JobScraper(url)
 
     try:
@@ -27,11 +28,16 @@ if __name__ == "__main__":
         print(f"Total offers found: {data['total_offers']}")
 
         with Progress() as progress:
-            task = progress.add_task("Processing job offers...", total=len(data['offers']))
+            task = progress.add_task("Processing job offers...", total=len(data['offers']), start=False)
+            progress.start_task(task)
 
             for offer in data['offers']:
                 title = offer['Title']
 
+                if "data" not in title.strip().lower():
+                    progress.console.log(f"[blue]Job '{title}' does not contain 'data'. Skipping...[/blue]")
+                    progress.advance(task)
+                    continue
                 if notion_client.title_exists(title):
                     progress.console.log(f"[yellow]Job '{title}' already exists. Skipping...[/yellow]")
                 else:
@@ -46,6 +52,7 @@ if __name__ == "__main__":
                         f"Candidates: {offer['Candidates']}\n"
                     )
                     sms_client.send_sms(sms_message)
+                    time.sleep(1)
 
                     job_properties = {
                         "Title": {

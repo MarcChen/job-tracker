@@ -3,14 +3,6 @@ FROM selenium/standalone-chromium:latest
 # Switch to root user to install Python
 USER root
 
-# Install Python and pip
-RUN apt-get update && \
-    apt-get install -y python3 python3-pip && \
-    rm -rf /var/lib/apt/lists/*
-
-# Set Python3 as the default python
-RUN ln -s /usr/bin/python3 /usr/bin/python
-
 # Set the working directory in the container
 WORKDIR /app
 
@@ -33,4 +25,4 @@ COPY main.py /app/
 USER seluser
 
 # Run the Python script
-CMD ["python", "/app/main.py"]
+CMD ["python3", "/app/main.py"]
