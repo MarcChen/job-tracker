@@ -1,4 +1,4 @@
-FROM selenium/standalone-chromium:latest
+FROM selenium/standalone-chromium:132.0
 
 # Switch to root user to install Python
 USER root
