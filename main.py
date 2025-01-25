@@ -1,3 +1,4 @@
+from doctest import debug
 from src.selenium_script import VIEJobScraper, AirFranceJobScraper
 from src.notion_client import NotionClient
 from src.sms_alert import SMSAPI
@@ -24,8 +25,11 @@ if __name__ == "__main__":
 
     url ="https://recrutement.airfrance.com/offre-de-emploi/liste-offres.aspx"
     scrapper_bis = AirFranceJobScraper(url = url, keyword="Data", contract_type="CDI")
-    scrapper_bis.load_all_offers()
-
+    try :
+        scrapper_bis.load_all_offers()
+    finally:
+        print("Done")
+        scrapper_bis.close_driver()
     # try:
     #     print("Scraping job offers...")
     #     data = scraper.scrape()

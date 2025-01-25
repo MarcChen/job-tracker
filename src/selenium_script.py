@@ -12,7 +12,7 @@ from typing import List, Dict, Union
 import logging
 
 class JobScraperBase:
-    def __init__(self, url: str):
+    def __init__(self, url: str, debug: bool = True):
         """
         Initialize the JobScraperBase class.
 
@@ -20,6 +20,7 @@ class JobScraperBase:
             url (str): The URL of the job listing page to scrape.
         """
         self.url = url
+        self.debug = debug
         self.driver = self._setup_driver()
 
     def _setup_driver(self) -> webdriver.Chrome:
@@ -29,15 +30,29 @@ class JobScraperBase:
         Returns:
             webdriver.Chrome: Configured Selenium WebDriver instance.
         """
-        chrome_options = Options()
-        chrome_options.add_argument('--no-sandbox')
-        chrome_options.add_argument('--headless')
-        chrome_options.add_argument('--disable-dev-shm-usage')
-        chrome_options.add_argument('--disable-gpu')
-        chrome_options.binary_location = '/usr/bin/chromium'
+        if not self.debug:
+            chrome_options = Options()
+            chrome_options.add_argument('--no-sandbox')
+            chrome_options.add_argument('--headless')
+            chrome_options.add_argument('--disable-dev-shm-usage')
+            chrome_options.add_argument('--disable-gpu')
+            chrome_options.add_argument('--start-maximized')  # Open in full screen
+            chrome_options.binary_location = '/usr/bin/chromium'
+            service = Service('/usr/bin/chromedriver')
 
-        service = Service('/usr/bin/chromedriver')
-        return webdriver.Chrome(service=service, options=chrome_options)
+            return webdriver.Chrome(service=service, options=chrome_options)
+        else:
+            options = webdriver.ChromeOptions()
+            options.add_argument('--no-sandbox')
+            options.add_argument('--disable-dev-shm-usage')
+            options.add_argument('--start-maximized')  # Open in full screen
+
+            # Use Remote WebDriver to connect to the Selenium container
+            driver = webdriver.Remote(
+            command_executor='http://localhost:4444/wd/hub',
+            options=options
+            )
+            return driver
 
     def load_all_offers(self) -> None:
         """
@@ -215,14 +230,14 @@ class AirFranceJobScraper(JobScraperBase):
 
 
             # # Select contract type
-            # print("Waiting for contract select element to be present.")
+            print("Waiting for contract select element to be present.")
             # # contract_select_element = WebDriverWait(self.driver, 20).until(
             # #     EC.presence_of_element_located((By.ID, "ctl00_ctl00_moteurRapideOffre_ctl00_EngineCriteriaCollection_Contract"))
             # # )
             # # print("Contract select element is present.")
             # # contract_select = Select(contract_select_element)
             # # contract_select.select_by_visible_text(self.contract_type)
-            # self.driver.find_element(by=By.ID, value="ctl00_ctl00_moteurRapideOffre_ctl00_EngineCriteriaCollection_Contract").send_keys(self.contract_type)
+            self.driver.find_element(by=By.ID, value="ctl00_ctl00_moteurRapideOffre_ctl00_EngineCriteriaCollection_Contract").send_keys(self.contract_type)
 
             # # Click search button
             # print("Waiting for search button to be clickable.")
@@ -234,35 +249,36 @@ class AirFranceJobScraper(JobScraperBase):
             self.driver.find_element(by=By.ID, value="ctl00_ctl00_moteurRapideOffre_BT_recherche").click()
 
             # # Wait for results to load and get total offers
-            # print("Waiting for results to load.")
-            # count_element = WebDriverWait(self.driver, 15).until(
-            #     EC.presence_of_element_located((By.ID, "ctl00_ctl00_corpsRoot_corps_PaginationLower_TotalOffers"))
-            # )
-            # self.total_offers = int(count_element.text.split()[0])
+            print("Waiting for results to load.")
+            count_element = WebDriverWait(self.driver, 15).until(
+                EC.presence_of_element_located((By.ID, "ctl00_ctl00_corpsRoot_corps_PaginationLower_TotalOffers"))
+            )
+            self.total_offers = int(count_element.text.split()[0])
 
-            # while True:
-            #     WebDriverWait(self.driver, 10).until(
-            #         EC.presence_of_element_located((By.CLASS_NAME, "ts-offer-list-item"))
-            #     )
-            #     offers = self.driver.find_elements(By.CLASS_NAME, "ts-offer-list-item")
-            #     for offer in offers:
-            #         title_link = offer.find_element(By.CLASS_NAME, "ts-offer-list-item__title-link")
-            #         self.offers_url.append(title_link.get_attribute("href"))
+            while True:
+                WebDriverWait(self.driver, 10).until(
+                    EC.presence_of_element_located((By.CLASS_NAME, "ts-offer-list-item"))
+                )
+                offers = self.driver.find_elements(By.CLASS_NAME, "ts-offer-list-item")
+                for offer in offers:
+                    title_link = offer.find_element(By.CLASS_NAME, "ts-offer-list-item__title-link")
+                    self.offers_url.append(title_link.get_attribute("href"))
+                    print(f"Added offer URL: {title_link.get_attribute('href')}")
 
-            #     # Attempt to click next page
-            #     try:
-            #         next_button = WebDriverWait(self.driver, 10).until(
-            #             EC.element_to_be_clickable((By.CSS_SELECTOR, "a[title='Page suivante de résultats d'offres']"))
-            #         )
-            #         next_button.click()
-            #         time.sleep(random.uniform(1, 3))
-            #         # Wait for new page to load
-            #         WebDriverWait(self.driver, 10).until(
-            #             EC.presence_of_element_located((By.CLASS_NAME, "ts-offer-list-item"))
-            #         )
-            #     except Exception:
-            #         print("Reached last page or could not find next button")
-            #         break
+                # Attempt to click next page
+                try:
+                    next_button = WebDriverWait(self.driver, 10).until(
+                        EC.element_to_be_clickable((By.CSS_SELECTOR, "a[title='Page suivante de résultats d'offres']"))
+                    )
+                    next_button.click()
+                    time.sleep(random.uniform(1, 3))
+                    # Wait for new page to load
+                    WebDriverWait(self.driver, 10).until(
+                        EC.presence_of_element_located((By.CLASS_NAME, "ts-offer-list-item"))
+                    )
+                except Exception:
+                    print("Reached last page or could not find next button")
+                    break
 
         except Exception as e:
             print(f"Error loading offers: {str(e)}")
