@@ -1,4 +1,4 @@
-from src.selenium_script import JobScraper
+from src.selenium_script import VIEJobScraper, AirFranceJobScraper
 from src.notion_client import NotionClient
 from src.sms_alert import SMSAPI
 from rich.progress import Progress
@@ -19,59 +19,64 @@ if __name__ == "__main__":
     notion_client = NotionClient(NOTION_API, DATABASE_ID)
     sms_client = SMSAPI(FREE_MOBILE_USER_ID, FREE_MOBILE_API_KEY)
 
-    url = "https://mon-vie-via.businessfrance.fr/offres/recherche?query=Data"
-    scraper = JobScraper(url)
+    # url = "https://mon-vie-via.businessfrance.fr/offres/recherche?query=Data"
+    # scraper = VIEJobScraper(url)
 
-    try:
-        print("Scraping job offers...")
-        data = scraper.scrape()
-        print(f"Total offers found: {data['total_offers']}")
+    url ="https://recrutement.airfrance.com/offre-de-emploi/liste-offres.aspx"
+    scrapper_bis = AirFranceJobScraper(url = url, keyword="Data", contract_type="CDI")
+    scrapper_bis.load_all_offers()
 
-        with Progress() as progress:
-            task = progress.add_task("Processing job offers...", total=len(data['offers']), start=False)
-            progress.start_task(task)
+    # try:
+    #     print("Scraping job offers...")
+    #     data = scraper.scrape()
+    #     print(f"Total offers found: {data['total_offers']}")
 
-            for offer in data['offers']:
-                title = offer['Title']
+    #     with Progress() as progress:
+    #         task = progress.add_task("Processing job offers...", total=len(data['offers']), start=False)
+    #         progress.start_task(task)
 
-                if "data" not in title.strip().lower():
-                    progress.console.log(f"[blue]Job '{title}' does not contain 'data'. Skipping...[/blue]")
-                    progress.advance(task)
-                    continue
-                if notion_client.title_exists(title):
-                    progress.console.log(f"[yellow]Job '{title}' already exists. Skipping...[/yellow]")
-                else:
-                    sms_message = (
-                        f"New Job Alert!\n"
-                        f"Title: {offer['Title']}\n"
-                        f"Company: {offer['Company']}\n"
-                        f"Location: {offer['Location']}\n"
-                        f"Contract Type: {offer['Contract Type']}\n"
-                        f"Duration: {offer['Duration']}\n"
-                        f"Views: {offer['Views']}\n"
-                        f"Candidates: {offer['Candidates']}\n"
-                    )
-                    sms_client.send_sms(sms_message)
-                    time.sleep(1)
+    #         for offer in data['offers']:
+    #             title = offer['Title']
 
-                    job_properties = {
-                        "Title": {
-                            "title": [
-                                {"type": "text", "text": {"content": offer['Title']}}
-                            ]
-                        },
-                        "Candidates": {"number": offer['Candidates']},
-                        "Views": {"number": offer['Views']},
-                        "ContractType": {"select": {"name": offer['Contract Type']}},
-                        "Company": {"select": {"name": offer['Company']}},
-                        "Location": {"select": {"name": offer['Location']}},
-                        "Duration": {"select": {"name": offer['Duration']}},
-                    }
-                    notion_client.create_page(job_properties)
-                    progress.console.log(f"[green]Job '{title}' added to Notion and SMS sent![/green]")
+    #             if "data" not in title.strip().lower():
+    #                 progress.console.log(f"[blue]Job '{title}' does not contain 'data'. Skipping...[/blue]")
+    #                 progress.advance(task)
+    #                 continue
+    #             if notion_client.title_exists(title):
+    #                 progress.console.log(f"[yellow]Job '{title}' already exists. Skipping...[/yellow]")
+    #                 progress.advance(task)
+    #             else:
+    #                 sms_message = (
+    #                     f"New Job Alert!\n"
+    #                     f"Title: {offer['Title']}\n"
+    #                     f"Company: {offer['Company']}\n"
+    #                     f"Location: {offer['Location']}\n"
+    #                     f"Contract Type: {offer['Contract Type']}\n"
+    #                     f"Duration: {offer['Duration']}\n"
+    #                     f"Views: {offer['Views']}\n"
+    #                     f"Candidates: {offer['Candidates']}\n"
+    #                 )
+    #                 sms_client.send_sms(sms_message)
+    #                 time.sleep(1)
 
-                progress.advance(task)
+    #                 job_properties = {
+    #                     "Title": {
+    #                         "title": [
+    #                             {"type": "text", "text": {"content": offer['Title']}}
+    #                         ]
+    #                     },
+    #                     "Candidates": {"number": offer['Candidates']},
+    #                     "Views": {"number": offer['Views']},
+    #                     "ContractType": {"select": {"name": offer['Contract Type']}},
+    #                     "Company": {"select": {"name": offer['Company']}},
+    #                     "Location": {"select": {"name": offer['Location']}},
+    #                     "Duration": {"select": {"name": offer['Duration']}},
+    #                 }
+    #                 notion_client.create_page(job_properties)
+    #                 progress.console.log(f"[green]Job '{title}' added to Notion and SMS sent![/green]")
+
+    #             progress.advance(task)
             
 
-    finally:
-        scraper.close_driver()
+    # finally:
+    #     scraper.close_driver()

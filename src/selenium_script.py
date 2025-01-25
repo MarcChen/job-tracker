@@ -1,17 +1,20 @@
+from ctypes import c_ssize_t
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import NoSuchElementException, TimeoutException
 import time
 import random
 from typing import List, Dict, Union
+import logging
 
-class JobScraper:
+class JobScraperBase:
     def __init__(self, url: str):
         """
-        Initialize the JobScraper class.
+        Initialize the JobScraperBase class.
 
         Args:
             url (str): The URL of the job listing page to scrape.
@@ -36,6 +39,52 @@ class JobScraper:
         service = Service('/usr/bin/chromedriver')
         return webdriver.Chrome(service=service, options=chrome_options)
 
+    def load_all_offers(self) -> None:
+        """
+        Load all offers by repeatedly clicking 'Voir Plus d'Offres' with added randomness.
+        """
+        raise NotImplementedError("This method should be implemented by subclasses")
+
+    def extract_offers(self) -> List[Dict[str, Union[str, int]]]:
+        """
+        Extract offers data from the loaded page.
+
+        Returns:
+            List[Dict[str, Union[str, int]]]: A list of dictionaries containing offer details.
+        """
+        raise NotImplementedError("This method should be implemented by subclasses")
+
+    def extract_total_offers(self) -> Union[str, int]:
+        """
+        Extract the total offers count displayed on the page.
+
+        Returns:
+            Union[str, int]: The total offers count as an integer, or 'Unknown' if an error occurs.
+        """
+        raise NotImplementedError("This method should be implemented by subclasses")
+
+    def scrape(self) -> Dict[str, Union[str, List[Dict[str, Union[str, int]]]]]:
+        """
+        Main method to perform the scraping.
+
+        Returns:
+            Dict[str, Union[str, List[Dict[str, Union[str, int]]]]]: A dictionary containing the total offers count and offers data.
+        """
+        self.load_all_offers()
+        offers = self.extract_offers()
+        total_offers = self.extract_total_offers()
+        return {
+            "total_offers": total_offers,
+            "offers": offers
+        }
+
+    def close_driver(self) -> None:
+        """
+        Close the Selenium WebDriver.
+        """
+        self.driver.quit()
+
+class VIEJobScraper(JobScraperBase):
     def load_all_offers(self) -> None:
         """
         Load all offers by repeatedly clicking 'Voir Plus d'Offres' with added randomness.
@@ -125,23 +174,109 @@ class JobScraper:
             print(f"Error retrieving total offers count: {e}")
             return "Unknown"
 
-    def scrape(self) -> Dict[str, Union[str, List[Dict[str, Union[str, int]]]]]:
+class AirFranceJobScraper(JobScraperBase):
+    def __init__(self, url: str, keyword: str, contract_type: str):
         """
-        Main method to perform the scraping.
+        Initialize the AirFranceJobScraper class.
+
+        Args:
+            url (str): The URL of the job listing page to scrape.
+            keyword (str): The keyword to search for in job listings.
+            contract_type (str): The type of contract to filter job listings.
+        """
+        super().__init__(url)
+        # Geting the page
+        self.keyword = keyword
+        self.contract_type = contract_type
+        self.offers_url = []
+        self.total_offers = 0
+        
+        time.sleep(random.uniform(1, 4))  # Randomized initial wait
+    def load_all_offers(self) -> None:
+        try:
+            self.driver.get(self.url)
+            # Handle cookies
+            try:
+                WebDriverWait(self.driver, 3).until(
+                    EC.element_to_be_clickable((By.ID, "didomi-notice-agree-button"))
+                ).click()
+                time.sleep(random.uniform(1, 2))
+                self.driver.navigate().refresh()
+            except Exception:
+                pass
+
+            # Enter keyword
+            print("Waiting for keyword input field to be clickable.")
+            input_element = self.driver.find_element(By.CSS_SELECTOR, "input[name*='OfferCriteria_Keywords']")
+            self.driver.execute_script("arguments[0].value = arguments[1];", input_element, self.keyword)
+
+
+            # self.driver.find_element(by=By.ID, value="ctl00_ctl00_moteurRapideOffre_ctl00_OfferCriteria_Keywords").send_keys(self.keyword)
+
+
+            # # Select contract type
+            # print("Waiting for contract select element to be present.")
+            # # contract_select_element = WebDriverWait(self.driver, 20).until(
+            # #     EC.presence_of_element_located((By.ID, "ctl00_ctl00_moteurRapideOffre_ctl00_EngineCriteriaCollection_Contract"))
+            # # )
+            # # print("Contract select element is present.")
+            # # contract_select = Select(contract_select_element)
+            # # contract_select.select_by_visible_text(self.contract_type)
+            # self.driver.find_element(by=By.ID, value="ctl00_ctl00_moteurRapideOffre_ctl00_EngineCriteriaCollection_Contract").send_keys(self.contract_type)
+
+            # # Click search button
+            # print("Waiting for search button to be clickable.")
+            # # search_button = WebDriverWait(self.driver, 20).until(
+            # #     EC.element_to_be_clickable((By.ID, "ctl00_ctl00_moteurRapideOffre_BT_recherche"))
+            # # )
+            # # print("Search button is clickable.")
+            # # search_button.click()
+            self.driver.find_element(by=By.ID, value="ctl00_ctl00_moteurRapideOffre_BT_recherche").click()
+
+            # # Wait for results to load and get total offers
+            # print("Waiting for results to load.")
+            # count_element = WebDriverWait(self.driver, 15).until(
+            #     EC.presence_of_element_located((By.ID, "ctl00_ctl00_corpsRoot_corps_PaginationLower_TotalOffers"))
+            # )
+            # self.total_offers = int(count_element.text.split()[0])
+
+            # while True:
+            #     WebDriverWait(self.driver, 10).until(
+            #         EC.presence_of_element_located((By.CLASS_NAME, "ts-offer-list-item"))
+            #     )
+            #     offers = self.driver.find_elements(By.CLASS_NAME, "ts-offer-list-item")
+            #     for offer in offers:
+            #         title_link = offer.find_element(By.CLASS_NAME, "ts-offer-list-item__title-link")
+            #         self.offers_url.append(title_link.get_attribute("href"))
+
+            #     # Attempt to click next page
+            #     try:
+            #         next_button = WebDriverWait(self.driver, 10).until(
+            #             EC.element_to_be_clickable((By.CSS_SELECTOR, "a[title='Page suivante de résultats d'offres']"))
+            #         )
+            #         next_button.click()
+            #         time.sleep(random.uniform(1, 3))
+            #         # Wait for new page to load
+            #         WebDriverWait(self.driver, 10).until(
+            #             EC.presence_of_element_located((By.CLASS_NAME, "ts-offer-list-item"))
+            #         )
+            #     except Exception:
+            #         print("Reached last page or could not find next button")
+            #         break
+
+        except Exception as e:
+            print(f"Error loading offers: {str(e)}")
+            raise  # Re-raise exception to see full traceback
+
+        print("Finished loading all available offers.")
+
+
+    def extract_offers(self) -> List[Dict[str, Union[str, int]]]:
+        """
+        Extract offers data from the loaded page.
 
         Returns:
-            Dict[str, Union[str, List[Dict[str, Union[str, int]]]]]: A dictionary containing the total offers count and offers data.
+            List[Dict[str, Union[str, int]]]: A list of dictionaries containing offer details.
         """
-        self.load_all_offers()
-        offers = self.extract_offers()
-        total_offers = self.extract_total_offers()
-        return {
-            "total_offers": total_offers,
-            "offers": offers
-        }
-
-    def close_driver(self) -> None:
-        """
-        Close the Selenium WebDriver.
-        """
-        self.driver.quit()
+        # Implement the logic specific to AirFrance job offers page
+        pass
