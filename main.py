@@ -38,7 +38,7 @@ if __name__ == "__main__":
 
     data = {
             "total_offers": data_VIE['total_offers'] + data_Air_France['total_offers'],
-            "offers": data_VIE + data_Air_France
+            "offers": data_VIE['offers'] + data_Air_France['offers']
         }
     print(f"Total offers found: {data['total_offers']}")
 
