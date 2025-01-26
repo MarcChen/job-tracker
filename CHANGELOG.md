@@ -73,3 +73,22 @@ This pull request introduces several key improvements to the functionality and p
 - **Increased Workflow Frequency:**
   - [`.github/workflows/run-container.yml`](diffhunk://#diff-9d8fa071698624d0a009b95095bdbb9802888955407a82532e59666535968260L9-R9): Changed the schedule to run the workflow daily instead of every two days.
 
+## [1.3.0] - 2025-01-26
+- Merged PR #7 by @MarcChen: Feature : Scraping new website
+This pull request includes significant changes to the job scraping and notification system, focusing on improving the scraping process, enhancing data handling, and refining the workflow configuration. The most important changes are outlined below.
+
+### Workflow Configuration Updates:
+* [`.github/workflows/run-container.yml`](diffhunk://#diff-9d8fa071698624d0a009b95095bdbb9802888955407a82532e59666535968260L9-R9): Adjusted the cron schedule to run every two days instead of daily and simplified the Docker image pulling process by removing the local image check. [[1]](diffhunk://#diff-9d8fa071698624d0a009b95095bdbb9802888955407a82532e59666535968260L9-R9) [[2]](diffhunk://#diff-9d8fa071698624d0a009b95095bdbb9802888955407a82532e59666535968260L21-R21)
+
+### Dockerfile Update:
+* [`Dockerfile`](diffhunk://#diff-dd2c0eb6ea5cfc6c4bd4eac30934e2d5746747af48fef6da689e85b752f39557L1-R1): Updated the base image version from `latest` to `132.0` for better stability and reproducibility.
+
+### Main Script Enhancements:
+* [`main.py`](diffhunk://#diff-b10564ab7d2c520cdd0243874879fb0a782862c3c902ab535faabe57d5a505e1L1-R3): Introduced multiple scrapers for different job sources, added a unified driver setup, and refined the job offer processing logic to handle multiple sources and improve SMS notifications. [[1]](diffhunk://#diff-b10564ab7d2c520cdd0243874879fb0a782862c3c902ab535faabe57d5a505e1L1-R3) [[2]](diffhunk://#diff-b10564ab7d2c520cdd0243874879fb0a782862c3c902ab535faabe57d5a505e1L22-R75) [[3]](diffhunk://#diff-b10564ab7d2c520cdd0243874879fb0a782862c3c902ab535faabe57d5a505e1L63-R108)
+
+### Notion Client Simplification:
+* [`src/notion_client.py`](diffhunk://#diff-7429c4882a1f31205d75db63e2f26239272f5745292b309bada97d138b03e402L69-R69): Simplified the `create_page` method to directly use the provided properties without additional transformation.
+
+### Selenium Script Refactoring:
+* [`src/selenium_script.py`](diffhunk://#diff-e8253c08be5d3a0d2d00c1038b0d8459ea66224a0cb76ceb8099f0ccf85aa27eR1-R93): Refactored the job scraper into a base class with common functionalities and specific scrapers for different job sources, improved the offer extraction process, and added better error handling and logging. [[1]](diffhunk://#diff-e8253c08be5d3a0d2d00c1038b0d8459ea66224a0cb76ceb8099f0ccf85aa27eR1-R93) [[2]](diffhunk://#diff-e8253c08be5d3a0d2d00c1038b0d8459ea66224a0cb76ceb8099f0ccf85aa27eL57-R114) [[3]](diffhunk://#diff-e8253c08be5d3a0d2d00c1038b0d8459ea66224a0cb76ceb8099f0ccf85aa27eL73-R129) [[4]](diffhunk://#diff-e8253c08be5d3a0d2d00c1038b0d8459ea66224a0cb76ceb8099f0ccf85aa27eR145) [[5]](diffhunk://#diff-e8253c08be5d3a0d2d00c1038b0d8459ea66224a0cb76ceb8099f0ccf85aa27eL100-R167)
+
