@@ -6,7 +6,7 @@ on:
     types:
       - completed
   schedule:
-    - cron: '0 0 */1 * *'
+    - cron: '0 0 */2 * *'
       branches:
         - main
 
@@ -18,20 +18,7 @@ jobs:
       - name: Log in to GitHub Container Registry
         run: echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-      - name: Check if Docker image exists locally
-        id: image-check
-        run: |
-          IMAGE_EXISTS=$(docker images -q ghcr.io/marcchen/vie-tracker:latest)
-          if [ -n "$IMAGE_EXISTS" ]; then
-            echo "Image exists locally."
-            echo "skip_pull=true" >> $GITHUB_ENV
-          else
-            echo "Image does not exist locally."
-            echo "skip_pull=false" >> $GITHUB_ENV
-          fi
-
-      - name: Pull Docker image if not present
-        if: env.skip_pull == 'false'
+      - name: Pull Docker image
         run: docker pull ghcr.io/marcchen/vie-tracker:latest
 
       - name: Clean up stopped Docker containers
