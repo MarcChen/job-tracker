@@ -12,7 +12,7 @@ from typing import List, Dict, Union
 import logging
 
 class JobScraperBase:
-    def __init__(self, url: str, debug: bool = True):
+    def __init__(self, url: str, driver: webdriver.Chrome = None):
         """
         Initialize the JobScraperBase class.
 
@@ -20,39 +20,7 @@ class JobScraperBase:
             url (str): The URL of the job listing page to scrape.
         """
         self.url = url
-        self.debug = debug
-        self.driver = self._setup_driver()
-
-    def _setup_driver(self) -> webdriver.Chrome:
-        """
-        Set up the Selenium WebDriver with necessary options.
-
-        Returns:
-            webdriver.Chrome: Configured Selenium WebDriver instance.
-        """
-        if not self.debug:
-            chrome_options = Options()
-            chrome_options.add_argument('--no-sandbox')
-            chrome_options.add_argument('--headless')
-            chrome_options.add_argument('--disable-dev-shm-usage')
-            chrome_options.add_argument('--disable-gpu')
-            chrome_options.add_argument('--start-maximized')  # Open in full screen
-            chrome_options.binary_location = '/usr/bin/chromium'
-            service = Service('/usr/bin/chromedriver')
-
-            return webdriver.Chrome(service=service, options=chrome_options)
-        else:
-            options = webdriver.ChromeOptions()
-            options.add_argument('--no-sandbox')
-            options.add_argument('--disable-dev-shm-usage')
-            options.add_argument('--start-maximized')  # Open in full screen
-
-            # Use Remote WebDriver to connect to the Selenium container
-            driver = webdriver.Remote(
-            command_executor='http://localhost:4444/wd/hub',
-            options=options
-            )
-            return driver
+        self.driver = setup_driver() if None else driver
 
     def _init_offer_dict(self) -> Dict[str, Union[str, int]]:
         """Initialize a standardized offer dictionary with default values."""
@@ -120,13 +88,10 @@ class JobScraperBase:
         }
 
 
-    def close_driver(self) -> None:
-        """
-        Close the Selenium WebDriver.
-        """
-        self.driver.quit()
-
 class VIEJobScraper(JobScraperBase):
+    def __init__(self, url: str, driver: webdriver.Chrome = None):
+        super().__init__(url, driver=driver)
+
     def load_all_offers(self) -> None:
         """
         Load all offers by repeatedly clicking 'Voir Plus d'Offres' with added randomness.
@@ -220,7 +185,8 @@ class VIEJobScraper(JobScraperBase):
             return "Unknown"
 
 class AirFranceJobScraper(JobScraperBase):
-    def __init__(self, url: str, keyword: str, contract_type: str):
+    def __init__(self, url: str, keyword: str, contract_type: str, driver: webdriver.Chrome = None):
+
         """
         Initialize the AirFranceJobScraper class.
 
@@ -229,14 +195,12 @@ class AirFranceJobScraper(JobScraperBase):
             keyword (str): The keyword to search for in job listings.
             contract_type (str): The type of contract to filter job listings.
         """
-        super().__init__(url)
-        # Geting the page
+        super().__init__(url, driver=driver)
         self.keyword = keyword
         self.contract_type = contract_type
         self.offers_url = []
         self.total_offers = 0
         
-        time.sleep(random.uniform(1, 4))  # Randomized initial wait
     def load_all_offers(self) -> None:
         try:
             self.driver.get(self.url)
@@ -278,7 +242,7 @@ class AirFranceJobScraper(JobScraperBase):
                 for offer in offers:
                     title_link = offer.find_element(By.CLASS_NAME, "ts-offer-list-item__title-link")
                     self.offers_url.append(title_link.get_attribute("href"))
-                    print(f"Added offer URL: {title_link.get_attribute('href')}")
+                print(f"{len(offers)} offers loaded. Total: {len(self.offers_url)}")
 
                 # Attempt to click next page
                 try:
@@ -358,3 +322,34 @@ class AirFranceJobScraper(JobScraperBase):
             Union[str, int]: The total offers count as an integer, or 'Unknown' if an error occurs.
         """
         return self.total_offers
+    
+def setup_driver(debug : bool = False) -> webdriver.Chrome:
+        """
+        Set up the Selenium WebDriver with necessary options.
+
+        Returns:
+            webdriver.Chrome: Configured Selenium WebDriver instance.
+        """
+        if not debug:
+            chrome_options = Options()
+            chrome_options.add_argument('--no-sandbox')
+            chrome_options.add_argument('--headless')
+            chrome_options.add_argument('--disable-dev-shm-usage')
+            chrome_options.add_argument('--disable-gpu')
+            chrome_options.add_argument('--start-maximized')  # Open in full screen
+            chrome_options.binary_location = '/usr/bin/chromium'
+            service = Service('/usr/bin/chromedriver')
+
+            return webdriver.Chrome(service=service, options=chrome_options)
+        else:
+            options = webdriver.ChromeOptions()
+            options.add_argument('--no-sandbox')
+            options.add_argument('--disable-dev-shm-usage')
+            options.add_argument('--start-maximized')  # Open in full screen
+
+            # Use Remote WebDriver to connect to the Selenium container
+            driver = webdriver.Remote(
+            command_executor='http://localhost:4444/wd/hub',
+            options=options
+            )
+            return driver

@@ -1,6 +1,6 @@
 from doctest import debug
 from selenium import webdriver
-from src.selenium_script import VIEJobScraper, AirFranceJobScraper
+from src.selenium_script import VIEJobScraper, AirFranceJobScraper, setup_driver
 from src.notion_client import NotionClient
 from src.sms_alert import SMSAPI
 from rich.progress import Progress
@@ -21,36 +21,20 @@ if __name__ == "__main__":
     notion_client = NotionClient(NOTION_API, DATABASE_ID)
     sms_client = SMSAPI(FREE_MOBILE_USER_ID, FREE_MOBILE_API_KEY)
 
-
-    # Create a single WebDriver instance
-    driver = webdriver.Chrome()
+    driver = setup_driver(debug=True)
 
     url_vie = "https://mon-vie-via.businessfrance.fr/offres/recherche?query=Data"
-    # url = "https://mon-vie-via.businessfrance.fr/offres/recherche?query=Data&specializationsIds=212&missionsTypesIds=1"
     scraper_vie = VIEJobScraper(url_vie, driver=driver)
 
     url_air_france ="https://recrutement.airfrance.com/offre-de-emploi/liste-offres.aspx"
     scraper_airfrance = AirFranceJobScraper(url = url_air_france, keyword="Data", contract_type="CDI", driver=driver)
-    # try :
-    #     data = scrapper_bis.scrape()
-    #     print(f"Scraped data is : {data}")
-    #     # Since the implementation isn't the same as VIE we could filter the offers before scraping on eahc offer, but since it's 
-    #     # a company website there's not that much of offers so we can scrape all of them and filter them after
-    # finally:
-    #     print("Done")
-    #     scrapper_bis.close_driver()
-
     try:
+        print("Scraping Air France offers...")
+        data_Air_France = scraper_airfrance.scrape() # Scrape all offers and filter them after since it's a company website with not many offers
         print("Scraping VIE offers...")
         data_VIE = scraper_vie.scrape()
     finally:
-        scraper_vie.close_driver()
-
-    try :
-        print("Scraping Air France offers...")
-        data_Air_France = scraper_airfrance.scrape()
-    finally:
-        scraper_airfrance.close_driver()
+        driver.quit()
 
     data = {
             "total_offers": data_VIE['total_offers'] + data_Air_France['total_offers'],
