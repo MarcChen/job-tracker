@@ -66,19 +66,7 @@ class NotionClient:
         # Convert payload to match Notion database schema
         payload = {
             "parent": {"database_id": self.database_id},
-            "properties": {
-                "Title": {
-                    "title": [
-                        {"type": "text", "text": {"content": properties["Title"]["title"][0]["text"]["content"]}}
-                    ]
-                },
-                "Candidates": {"number": int(properties["Candidates"]["number"])},
-                "Views": {"number": int(properties["Views"]["number"])},
-                "ContractType": {"select": {"name": properties["ContractType"]["select"]["name"]}},
-                "Company": {"select": {"name": properties["Company"]["select"]["name"]}},
-                "Location": {"select": {"name": properties["Location"]["select"]["name"]}},
-                "Duration": {"select": {"name": properties["Duration"]["select"]["name"]}}
-            }
+            "properties": properties
         }
 
         url = "https://api.notion.com/v1/pages"

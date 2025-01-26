@@ -54,6 +54,31 @@ class JobScraperBase:
             )
             return driver
 
+    def _init_offer_dict(self) -> Dict[str, Union[str, int]]:
+        """Initialize a standardized offer dictionary with default values."""
+        return {
+            "Title": "N/A",
+            "Company": "N/A",
+            "Location": "N/A",
+            "Contract Type": "N/A",
+            "Duration": "N/A",
+            "Views": 0,
+            "Candidates": 0,
+            "Source": "N/A",
+            "URL": "N/A",
+            "Reference": "N/A",
+            "Job Category": "N/A",
+            "Job Type": "N/A",
+            "Schedule Type": "N/A",
+            "Description": "N/A"
+        }
+
+
+    def validate_offer(self, offer: dict) -> bool:
+        """Ensure required fields are present."""
+        required_fields = ["Title", "Company", "Location", "Source"]
+        return all(offer[field] != "N/A" for field in required_fields)
+
     def load_all_offers(self) -> None:
         """
         Load all offers by repeatedly clicking 'Voir Plus d'Offres' with added randomness.
@@ -86,12 +111,14 @@ class JobScraperBase:
             Dict[str, Union[str, List[Dict[str, Union[str, int]]]]]: A dictionary containing the total offers count and offers data.
         """
         self.load_all_offers()
-        offers = self.extract_offers()
-        total_offers = self.extract_total_offers()
+        raw_offers = self.extract_offers()
+        validated_offers = [offer for offer in raw_offers if self.validate_offer(offer)]
+        
         return {
-            "total_offers": total_offers,
-            "offers": offers
+            "total_offers": self.extract_total_offers(),
+            "offers": validated_offers
         }
+
 
     def close_driver(self) -> None:
         """
@@ -118,8 +145,8 @@ class VIEJobScraper(JobScraperBase):
                 self.driver.execute_script("arguments[0].click();", button)  # JavaScript click
 
                 # Wait for new offers to load
-                time.sleep(random.uniform(2, 5))  # Randomized wait
-                WebDriverWait(self.driver, 10).until(
+                time.sleep(random.uniform(1.5, 2.5))  # Randomized wait
+                WebDriverWait(self.driver, 5).until(
                     lambda d: len(d.find_elements(By.CLASS_NAME, "figure-item")) > previous_count
                 )
 
@@ -134,7 +161,7 @@ class VIEJobScraper(JobScraperBase):
                     previous_count = current_count
                     print(f"Loaded {current_count} offers so far.")
             except Exception as e:
-                print(f"Exiting after encountering an issue: {e}")
+                print(f"Reached last offer")
                 break
 
         print("Finished loading all available offers.")
@@ -150,6 +177,7 @@ class VIEJobScraper(JobScraperBase):
         offer_elements = self.driver.find_elements(By.CLASS_NAME, "figure-item")
 
         for offer in offer_elements:
+            offer_data = self._init_offer_dict()
             try:
                 time.sleep(random.uniform(0.1, 0.3))  # Randomized delay per offer
                 title = offer.find_element(By.TAG_NAME, "h2").text
@@ -161,15 +189,17 @@ class VIEJobScraper(JobScraperBase):
                 views = int(details[2].text.split()[0]) if len(details) > 2 else 0
                 candidates = int(details[3].text.split()[0]) if len(details) > 3 else 0
 
-                offers.append({
-                    "Title": title,
-                    "Company": company,
-                    "Location": location,
-                    "Contract Type": contract_type,
-                    "Duration": duration,
-                    "Views": views,
-                    "Candidates": candidates,
+                offer_data.update({
+                    "Title": offer.find_element(By.TAG_NAME, "h2").text,
+                    "Company": offer.find_element(By.CLASS_NAME, "organization").text,
+                    "Location": offer.find_element(By.CLASS_NAME, "location").text,
+                    "Contract Type": details[0].text if len(details) > 0 else "N/A",
+                    "Duration": details[1].text if len(details) > 1 else "N/A",
+                    "Views": int(details[2].text.split()[0]) if len(details) > 2 else 0,
+                    "Candidates": int(details[3].text.split()[0]) if len(details) > 3 else 0,
+                    "Source": "Business France"
                 })
+                offers.append(offer_data)
             except Exception as e:
                 print(f"Error extracting data for an offer: {e}")
         return offers
@@ -220,36 +250,21 @@ class AirFranceJobScraper(JobScraperBase):
             except Exception:
                 pass
 
-            # Enter keyword
-            print("Waiting for keyword input field to be clickable.")
-            input_element = self.driver.find_element(By.CSS_SELECTOR, "input[name*='OfferCriteria_Keywords']")
-            self.driver.execute_script("arguments[0].value = arguments[1];", input_element, self.keyword)
-
-
-            # self.driver.find_element(by=By.ID, value="ctl00_ctl00_moteurRapideOffre_ctl00_OfferCriteria_Keywords").send_keys(self.keyword)
-
-
-            # # Select contract type
-            print("Waiting for contract select element to be present.")
-            # # contract_select_element = WebDriverWait(self.driver, 20).until(
-            # #     EC.presence_of_element_located((By.ID, "ctl00_ctl00_moteurRapideOffre_ctl00_EngineCriteriaCollection_Contract"))
-            # # )
-            # # print("Contract select element is present.")
-            # # contract_select = Select(contract_select_element)
-            # # contract_select.select_by_visible_text(self.contract_type)
-            self.driver.find_element(by=By.ID, value="ctl00_ctl00_moteurRapideOffre_ctl00_EngineCriteriaCollection_Contract").send_keys(self.contract_type)
-
-            # # Click search button
-            # print("Waiting for search button to be clickable.")
-            # # search_button = WebDriverWait(self.driver, 20).until(
-            # #     EC.element_to_be_clickable((By.ID, "ctl00_ctl00_moteurRapideOffre_BT_recherche"))
-            # # )
-            # # print("Search button is clickable.")
-            # # search_button.click()
+            # Filtering offers 
+            if self.keyword == "":
+                print("No keyword provided. Skipping keyword filtering.")
+            else:
+                input_element = self.driver.find_element(By.CSS_SELECTOR, "input[name*='OfferCriteria_Keywords']")
+                self.driver.execute_script("arguments[0].value = arguments[1];", input_element, self.keyword)
+            
+            if self.contract_type == "":
+                print("No contract type provided. Skipping contract type filtering.")
+            else:
+                self.driver.find_element(by=By.ID, value="ctl00_ctl00_moteurRapideOffre_ctl00_EngineCriteriaCollection_Contract").send_keys(self.contract_type)
+            
             self.driver.find_element(by=By.ID, value="ctl00_ctl00_moteurRapideOffre_BT_recherche").click()
+            print("Offers Filtered.")
 
-            # # Wait for results to load and get total offers
-            print("Waiting for results to load.")
             count_element = WebDriverWait(self.driver, 15).until(
                 EC.presence_of_element_located((By.ID, "ctl00_ctl00_corpsRoot_corps_PaginationLower_TotalOffers"))
             )
@@ -268,7 +283,7 @@ class AirFranceJobScraper(JobScraperBase):
                 # Attempt to click next page
                 try:
                     next_button = WebDriverWait(self.driver, 10).until(
-                        EC.element_to_be_clickable((By.CSS_SELECTOR, "a[title='Page suivante de résultats d'offres']"))
+                        EC.element_to_be_clickable((By.ID, "ctl00_ctl00_corpsRoot_corps_Pagination_linkSuivPage"))
                     )
                     next_button.click()
                     time.sleep(random.uniform(1, 3))
@@ -295,4 +310,51 @@ class AirFranceJobScraper(JobScraperBase):
             List[Dict[str, Union[str, int]]]: A list of dictionaries containing offer details.
         """
         # Implement the logic specific to AirFrance job offers page
-        pass
+        def extract_element(by, value, attribute=None, split_text=None, index=None):
+                    try:
+                        element = self.driver.find_element(by, value)
+                        text = element.get_attribute(attribute) if attribute else element.text
+                        if split_text and index is not None:
+                            return text.split(split_text)[index].strip()
+                        return text.strip()
+                    except (NoSuchElementException, IndexError, AttributeError):
+                        return "N/A"
+                    
+        offers = []
+        for offer_url in self.offers_url:
+            self.driver.get(offer_url)
+            time.sleep(random.uniform(1, 3))
+            
+            # Initialize all fields with default values
+            offer_data = self._init_offer_dict()
+
+            try:
+                offer_data.update({
+                    "Title": extract_element(By.CSS_SELECTOR, "h1.ts-offer-page__title span:first-child"),
+                    "Reference": extract_element(By.CLASS_NAME, "ts-offer-page__reference", split_text="Référence", index=1),
+                    "Contract Type": extract_element(By.ID, "fldjobdescription_contract"),
+                    "Duration": extract_element(By.ID, "fldjobdescription_contractlength"),
+                    "Location": extract_element(By.ID, "fldlocation_location_geographicalareacollection").split(",")[0],
+                    "Company": extract_element(By.CSS_SELECTOR, "div.ts-offer-page__entity-logo img", attribute="alt", split_text=" - ", index=1),
+                    "Job Category": extract_element(By.ID, "fldjobdescription_professionalcategory"),
+                    "Schedule Type": extract_element(By.ID, "fldjobdescription_customcodetablevalue3"),
+                    "Job Type": extract_element(By.ID, "fldjobdescription_primaryprofile"),
+                    "Description": "\n".join([extract_element(By.ID, "fldjobdescription_longtext1"),
+                                           extract_element(By.ID, "fldjobdescription_description1")]),
+                    "URL": offer_url,
+                    "Source": "Air France"
+                })
+                offers.append(offer_data)
+            except Exception as e:
+                print(f"Error extracting data for an offer: {e}")
+        return offers
+
+
+    def extract_total_offers(self) -> Union[str, int]:
+        """
+        Extract the total offers count displayed on the page.
+
+        Returns:
+            Union[str, int]: The total offers count as an integer, or 'Unknown' if an error occurs.
+        """
+        return self.total_offers
