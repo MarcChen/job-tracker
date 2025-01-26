@@ -21,13 +21,13 @@ if __name__ == "__main__":
     notion_client = NotionClient(NOTION_API, DATABASE_ID)
     sms_client = SMSAPI(FREE_MOBILE_USER_ID, FREE_MOBILE_API_KEY)
 
-    driver = setup_driver(debug=True)
+    driver = setup_driver()
 
     url_vie = "https://mon-vie-via.businessfrance.fr/offres/recherche?query=Data"
     scraper_vie = VIEJobScraper(url_vie, driver=driver)
 
     url_air_france ="https://recrutement.airfrance.com/offre-de-emploi/liste-offres.aspx"
-    scraper_airfrance = AirFranceJobScraper(url = url_air_france, keyword="Data", contract_type="CDI", driver=driver)
+    scraper_airfrance = AirFranceJobScraper(url = url_air_france, keyword="", contract_type="CDI", driver=driver)
     try:
         print("Scraping Air France offers...")
         data_Air_France = scraper_airfrance.scrape() # Scrape all offers and filter them after since it's a company website with not many offers
@@ -74,8 +74,8 @@ if __name__ == "__main__":
                             f"Contract Type: {offer['Contract Type']}\n"
                             f"URL: {offer['URL']}\n"
                         )
-                    # sms_client.send_sms(sms_message)
-                    # time.sleep(1)
+                    sms_client.send_sms(sms_message)
+                    time.sleep(1)
 
                     job_properties = {
                         "Title": {
