@@ -21,7 +21,7 @@ if __name__ == "__main__":
     notion_client = NotionClient(NOTION_API, DATABASE_ID)
     sms_client = SMSAPI(FREE_MOBILE_USER_ID, FREE_MOBILE_API_KEY)
 
-    driver = setup_driver()
+    driver = setup_driver(debug=True)
 
     url_vie = "https://mon-vie-via.businessfrance.fr/offres/recherche?query=Data"
     scraper_vie = VIEJobScraper(url_vie, driver=driver)
@@ -48,7 +48,7 @@ if __name__ == "__main__":
             for offer in data['offers']:
                 title = offer['Title']
 
-                if "data" not in title.strip().lower():
+                if not any(keyword.lower() in title.strip().lower() for keyword in ["data", "ai", "ml", "machine learning", "artificial intelligence", "big data"]):
                     progress.console.log(f"[blue]Job '{title}' does not contain 'data'. Skipping...[/blue]")
                     progress.advance(task)
                 elif notion_client.title_exists(title):
