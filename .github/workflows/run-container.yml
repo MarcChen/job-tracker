@@ -12,7 +12,7 @@ on:
 
 jobs:
   run-container:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
 
     steps:
       - name: Log in to GitHub Container Registry
