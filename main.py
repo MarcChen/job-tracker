@@ -127,10 +127,7 @@ if __name__ == "__main__":
             for offer in data['offers']:
                 title = offer['Title']
 
-                if not any(keyword.lower() in title.strip().lower() for keyword in ["data", "ai", "ml", "machine learning", "artificial intelligence", "big data"]):
-                    progress.console.log(f"[blue]Job '{title}' does not contain 'data'. Skipping...[/blue]")
-                    progress.advance(task)
-                elif notion_client.title_exists(title):
+                if notion_client.title_exists(title):
                     progress.console.log(f"[yellow]Job '{title}' already exists. Skipping...[/yellow]")
                     progress.advance(task)
                 else:
