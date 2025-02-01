@@ -1,16 +1,14 @@
-import logging
 import random
 import time
-from ctypes import c_ssize_t
 from typing import Dict, List, Union
 
 from selenium import webdriver
-from selenium.common.exceptions import NoSuchElementException, TimeoutException
+from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import Select, WebDriverWait
+from selenium.webdriver.support.ui import WebDriverWait
 
 
 class JobScraperBase:
@@ -164,8 +162,8 @@ class VIEJobScraper(JobScraperBase):
                 else:
                     previous_count = current_count
                     print(f"Loaded {current_count} offers so far.")
-            except Exception as e:
-                print(f"Reached last offer")
+            except Exception:
+                print("Reached last offer")
                 break
 
         print("Finished loading all available offers.")
@@ -636,8 +634,8 @@ class AppleJobScraper(JobScraperBase):
                     )
                     time.sleep(random.uniform(1.5, 2.5))
 
-                except Exception as e:
-                    print(f"Reached last offer")
+                except Exception:
+                    print("Reached last offer")
                     break
 
         except Exception as e:
