@@ -426,7 +426,6 @@ class AppleJobScraper(JobScraperBase):
             print(f"Error loading offers: {str(e)}")
             raise
 
-        print(f"SCRAPED OFFERS : {self.offers_url}")
         print(f"TOTAL OFFERS : {len(self.offers_url)}")
         print("Finished loading all available offers.")
 
@@ -466,8 +465,8 @@ class AppleJobScraper(JobScraperBase):
                     "Description": "\n".join([
                         extract_element(By.ID, "jd-job-summary"),
                         extract_element(By.ID, "jd-description"),
-                        extract_element(By.ID, "jd-minimum-qualifications"),
-                        extract_element(By.ID, "jd-preferred-qualifications"),
+                        "Minimum Qualification\n" + extract_element(By.ID, "jd-minimum-qualifications"),
+                        "Preferred Qualification\n" + extract_element(By.ID, "jd-preferred-qualifications"),
                     ]),
                     "URL": offer_url,
                     "Source": "Apple"
