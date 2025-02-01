@@ -189,11 +189,25 @@ class VIEJobScraper(JobScraperBase):
                     random.uniform(0.1, 0.3)
                 )  # Randomized delay per offer
                 title = offer.find_element(By.TAG_NAME, "h2").text
-                if not any(
-                    keyword.lower() in title.strip().lower()
+
+                # Apply inclusion filter: Skip if none of the include_filters are found.
+                if self.include_filters and not any(
+                    keyword.lower() in title.lower()
                     for keyword in self.include_filters
                 ):
-                    print(f"Skipping offer '{title}' ...")
+                    print(
+                        f"Skipping offer '{title}' (doesn't match include filters)..."
+                    )
+                    continue
+
+                # Apply exclusion filter: Skip if any of the exclude_filters are found.
+                if self.exclude_filters and any(
+                    keyword.lower() in title.lower()
+                    for keyword in self.exclude_filters
+                ):
+                    print(
+                        f"Skipping offer '{title}' (matches exclude filters)..."
+                    )
                     continue
                 details = offer.find_elements(By.TAG_NAME, "li")
 
