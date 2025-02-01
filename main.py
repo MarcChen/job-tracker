@@ -106,9 +106,13 @@ if __name__ == "__main__":
                             elif field == 'URL':
                                 job_properties[field] = {"url": offer[field]}
                             elif field in ['Description', 'Job Type']:
+                                content = offer[field]
+                                if len(content) > 2000:
+                                    content = content[:2000]
+                                    print(f"[yellow]Warning: {field} content clipped to 2000 characters.[/yellow]")
                                 job_properties[field] = {
                                     "rich_text": [
-                                        {"type": "text", "text": {"content": offer[field]}}
+                                        {"type": "text", "text": {"content": content}}
                                     ]
                                 }
                             else:

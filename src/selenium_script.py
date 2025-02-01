@@ -463,9 +463,9 @@ class AppleJobScraper(JobScraperBase):
                     "Schedule Type": extract_element(By.ID, "jobWeeklyHours"),
                     "Job Type": extract_element(By.ID, "job-team-name"),
                     "Description": "\n".join([
-                        extract_element(By.ID, "jd-job-summary"),
-                        extract_element(By.ID, "jd-description"),
-                        "Minimum Qualification\n" + extract_element(By.ID, "jd-minimum-qualifications"),
+                        # extract_element(By.ID, "jd-job-summary"), Removed cuz description is too long
+                        "Job Description\n" + extract_element(By.ID, "jd-description") + "\n",
+                        "Minimum Qualification\n" + extract_element(By.ID, "jd-minimum-qualifications") + "\n",
                         "Preferred Qualification\n" + extract_element(By.ID, "jd-preferred-qualifications"),
                     ]),
                     "URL": offer_url,
