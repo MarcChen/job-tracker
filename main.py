@@ -51,7 +51,7 @@ if __name__ == "__main__":
         "alternance",
     ]
 
-    driver = setup_driver(debug=True)
+    driver = setup_driver()
 
     url_vie = (
         "https://mon-vie-via.businessfrance.fr/offres/recherche?query=Data"
