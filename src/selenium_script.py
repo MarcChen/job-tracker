@@ -271,8 +271,8 @@ class AirFranceJobScraper(JobScraperBase):
         keyword: str,
         contract_type: str,
         driver: webdriver.Chrome = None,
-        include_filters: List[str] = None,
-        exclude_filters: List[str] = None,
+        include_filters: List[str] = [],
+        exclude_filters: List[str] = [],
     ):
         """
         Initialize the AirFranceJobScraper class.
@@ -504,8 +504,8 @@ class AppleJobScraper(JobScraperBase):
         self,
         url: str,
         driver: webdriver.Chrome = None,
-        include_filters: List[str] = None,
-        exclude_filters: List[str] = None,
+        include_filters: List[str] = [],
+        exclude_filters: List[str] = [],
     ):
         """
         Initialize the AirFranceJobScraper class.
