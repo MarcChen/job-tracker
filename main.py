@@ -150,8 +150,8 @@ if __name__ == "__main__":
                             f"Contract Type: {offer['Contract Type']}\n"
                             f"URL: {offer['URL']}\n"
                         )
-                    # sms_client.send_sms(sms_message)
-                    # time.sleep(1)
+                    sms_client.send_sms(sms_message)
+                    time.sleep(1)
 
                     job_properties = {
                         "Title": {
