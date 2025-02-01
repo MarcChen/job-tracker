@@ -1,11 +1,11 @@
-from doctest import debug
-from selenium import webdriver
-from src.selenium_script import VIEJobScraper, AirFranceJobScraper, setup_driver
-from src.notion_client import NotionClient
-from src.sms_alert import SMSAPI
-from rich.progress import Progress
 import os
-import time
+
+from rich.progress import Progress, SpinnerColumn, TextColumn
+
+from src.notion_client import NotionClient
+from src.selenium_script import (AirFranceJobScraper, AppleJobScraper,
+                                 VIEJobScraper, setup_driver)
+from src.sms_alert import SMSAPI
 
 if __name__ == "__main__":
     DATABASE_ID = os.getenv("DATABASE_ID")
@@ -15,30 +15,109 @@ if __name__ == "__main__":
 
     assert DATABASE_ID, "DATABASE_ID environment variable is not set."
     assert NOTION_API, "NOTION_API environment variable is not set."
-    assert FREE_MOBILE_USER_ID, "FREE_MOBILE_USER_ID environment variable is not set."
-    assert FREE_MOBILE_API_KEY, "FREE_MOBILE_API_KEY environment variable is not set."
+    assert (
+        FREE_MOBILE_USER_ID
+    ), "FREE_MOBILE_USER_ID environment variable is not set."
+    assert (
+        FREE_MOBILE_API_KEY
+    ), "FREE_MOBILE_API_KEY environment variable is not set."
 
     notion_client = NotionClient(NOTION_API, DATABASE_ID)
     sms_client = SMSAPI(FREE_MOBILE_USER_ID, FREE_MOBILE_API_KEY)
 
-    driver = setup_driver()
+    INCLUDE_FILTERS = [
+        "data",
+        "machine learning",
+        "artificial intelligence",
+        "big data",
+        "science",
+        "deep learning",
+        "deep",
+        "learning",
+        "neural networks",
+        "computer vision",
+        "vision",
+        "data mining",
+        "predictive modeling",
+        "language processing",
+    ]
+    EXCLUDE_FILTERS = [
+        "internship",
+        "stage",
+        "intern",
+        "internship",
+        "apprenticeship",
+        "apprentice",
+        "alternance",
+    ]
 
-    url_vie = "https://mon-vie-via.businessfrance.fr/offres/recherche?query=Data"
-    scraper_vie = VIEJobScraper(url_vie, driver=driver)
+    driver = setup_driver(debug=True)
 
-    url_air_france ="https://recrutement.airfrance.com/offre-de-emploi/liste-offres.aspx"
-    scraper_airfrance = AirFranceJobScraper(url = url_air_france, keyword="", contract_type="CDI", driver=driver)
+    url_vie = (
+        "https://mon-vie-via.businessfrance.fr/offres/recherche?query=Data"
+    )
+    scraper_vie = VIEJobScraper(
+        url_vie,
+        driver=driver,
+        include_filters=INCLUDE_FILTERS,
+        exclude_filters=EXCLUDE_FILTERS,
+    )
+
+    url_air_france = (
+        "https://recrutement.airfrance.com/offre-de-emploi/liste-offres.aspx"
+    )
+    scraper_airfrance = AirFranceJobScraper(
+        url=url_air_france,
+        keyword="",
+        contract_type="CDI",
+        driver=driver,
+        include_filters=INCLUDE_FILTERS,
+        exclude_filters=EXCLUDE_FILTERS,
+    )
+
+    url_apple = "https://jobs.apple.com/fr-fr/search?sort=relevance&location=france-FRAC+singapore-SGP+hong-kong-HKGC+taiwan-TWN"
+    scraper_apple = AppleJobScraper(
+        url=url_apple,
+        driver=driver,
+        include_filters=INCLUDE_FILTERS,
+        exclude_filters=EXCLUDE_FILTERS,
+    )
+
     try:
-        print("Scraping Air France offers...")
-        data_Air_France = scraper_airfrance.scrape() # Scrape all offers and filter them after since it's a company website with not many offers
-        print("Scraping VIE offers...")
-        data_VIE = scraper_vie.scrape()
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            transient=True,  # Remove the spinner after task completion
+        ) as progress:
+            # Air France scraping
+            task_air = progress.add_task(
+                "[cyan]Scraping Air France offers...", total=None
+            )
+            data_Air_France = (
+                scraper_airfrance.scrape()
+            )  # Your existing scraping call
+            progress.remove_task(task_air)
+
+            # VIE scraping
+            task_vie = progress.add_task(
+                "[magenta]Scraping VIE offers...", total=None
+            )
+            data_VIE = scraper_vie.scrape()
+            progress.remove_task(task_vie)
+
+            # Apple scraping
+            task_apple = progress.add_task(
+                "[green]Scraping Apple offers...", total=None
+            )
+            scraper_apple.load_all_offers()
+            data_apple = scraper_apple.scrape()
+            progress.remove_task(task_apple)
     finally:
         driver.quit()
 
     data = {
-            "total_offers": data_VIE['total_offers'] + data_Air_France['total_offers'],
-            "offers": data_VIE['offers'] + data_Air_France['offers']
+            "total_offers": data_VIE['total_offers'] + data_Air_France['total_offers'] + data_apple['total_offers'],
+            "offers": data_VIE['offers'] + data_Air_France['offers'] + data_apple['offers']
         }
     print(f"Total offers found: {data['total_offers']}")
 
@@ -48,10 +127,7 @@ if __name__ == "__main__":
             for offer in data['offers']:
                 title = offer['Title']
 
-                if "data" not in title.strip().lower():
-                    progress.console.log(f"[blue]Job '{title}' does not contain 'data'. Skipping...[/blue]")
-                    progress.advance(task)
-                elif notion_client.title_exists(title):
+                if notion_client.title_exists(title):
                     progress.console.log(f"[yellow]Job '{title}' already exists. Skipping...[/yellow]")
                     progress.advance(task)
                 else:
@@ -74,8 +150,8 @@ if __name__ == "__main__":
                             f"Contract Type: {offer['Contract Type']}\n"
                             f"URL: {offer['URL']}\n"
                         )
-                    sms_client.send_sms(sms_message)
-                    time.sleep(1)
+                    # sms_client.send_sms(sms_message)
+                    # time.sleep(1)
 
                     job_properties = {
                         "Title": {
@@ -93,9 +169,13 @@ if __name__ == "__main__":
                             elif field == 'URL':
                                 job_properties[field] = {"url": offer[field]}
                             elif field in ['Description', 'Job Type']:
+                                content = offer[field]
+                                if len(content) > 2000:
+                                    content = content[:2000]
+                                    print(f"[yellow]Warning: {field} content clipped to 2000 characters.[/yellow]")
                                 job_properties[field] = {
                                     "rich_text": [
-                                        {"type": "text", "text": {"content": offer[field]}}
+                                        {"type": "text", "text": {"content": content}}
                                     ]
                                 }
                             else:
@@ -103,6 +183,6 @@ if __name__ == "__main__":
                     notion_client.create_page(job_properties)
                     progress.console.log(f"[green]Job '{title}' added to Notion and SMS sent![/green]")
                     progress.advance(task)
-            
+
     except Exception as e:
         print(f"Error processing scraped job offers: {e}")

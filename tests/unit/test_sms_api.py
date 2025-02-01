@@ -1,6 +1,9 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
-from sms_alert import SMSAPI, MissingParameter, TooManySMS, ServiceNotEnabled, ServerError  # Adjust import as needed
+
+from sms_alert import (SMSAPI, MissingParameter,  # Adjust import as needed
+                       ServerError, ServiceNotEnabled, TooManySMS)
 
 
 @pytest.fixture
@@ -24,7 +27,7 @@ def test_send_sms_error_handling(mock_get, sms_api):
         (400, MissingParameter),
         (402, TooManySMS),
         (403, ServiceNotEnabled),
-        (500, ServerError)
+        (500, ServerError),
     ]
 
     for status_code, expected_exception in error_scenarios:

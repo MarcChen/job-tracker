@@ -1,6 +1,8 @@
-import requests
-from typing import Dict, List, Optional
 import json
+from typing import Dict, List, Optional
+
+import requests
+
 
 class NotionClient:
     def __init__(self, notion_api_key: str, database_id: str):
@@ -16,7 +18,7 @@ class NotionClient:
         self.headers = {
             "Authorization": f"Bearer {self.notion_api_key}",
             "Content-Type": "application/json",
-            "Notion-Version": "2022-06-28"
+            "Notion-Version": "2022-06-28",
         }
 
     def title_exists(self, title: str) -> bool:
@@ -37,7 +39,8 @@ class NotionClient:
             titles = [
                 page["properties"]["Title"]["title"][0]["text"]["content"]
                 for page in data.get("results", [])
-                if "Title" in page["properties"] and page["properties"]["Title"]["title"]
+                if "Title" in page["properties"]
+                and page["properties"]["Title"]["title"]
             ]
             return title in titles
         except requests.exceptions.RequestException as e:
@@ -54,19 +57,26 @@ class NotionClient:
         Returns:
             Optional[Dict]: The JSON response from the Notion API if successful; None otherwise.
         """
-        title = properties.get("Title", {}).get("title", [{}])[0].get("text", {}).get("content", "")
+        title = (
+            properties.get("Title", {})
+            .get("title", [{}])[0]
+            .get("text", {})
+            .get("content", "")
+        )
         if not title:
             print("Error: Title property is required to create a page.")
             return None
 
         if self.title_exists(title):
-            print(f"Page with title '{title}' already exists. Skipping creation.")
+            print(
+                f"Page with title '{title}' already exists. Skipping creation."
+            )
             return None
 
         # Convert payload to match Notion database schema
         payload = {
             "parent": {"database_id": self.database_id},
-            "properties": properties
+            "properties": properties,
         }
 
         url = "https://api.notion.com/v1/pages"
@@ -78,10 +88,11 @@ class NotionClient:
             return response.json()
         except requests.exceptions.RequestException as e:
             print(f"Error creating page '{title}': {e}")
-            print(f"Response Content: {response.text if 'response' in locals() else 'No response'}")
+            print(
+                f"Response Content: {response.text if 'response' in locals() else 'No response'}"
+            )
             print(f"Payload: {json.dumps(payload, indent=2)}")
             return None
-
 
     def get_page_titles(self) -> List[str]:
         """
@@ -98,7 +109,8 @@ class NotionClient:
             titles = [
                 page["properties"]["Title"]["title"][0]["text"]["content"]
                 for page in data.get("results", [])
-                if "Title" in page["properties"] and page["properties"]["Title"]["title"]
+                if "Title" in page["properties"]
+                and page["properties"]["Title"]["title"]
             ]
             return titles
         except requests.exceptions.RequestException as e:
