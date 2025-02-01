@@ -30,11 +30,19 @@ if __name__ == "__main__":
 
     INCLUDE_FILTERS = [
         "data",
-        "ai",
-        "ml",
         "machine learning",
         "artificial intelligence",
         "big data",
+        "science",
+        "deep learning",
+        "deep",
+        "learning",
+        "neural networks",
+        "computer vision",
+        "vision",
+        "data mining",
+        "predictive modeling",
+        "language processing",
     ]
     EXCLUDE_FILTERS = [
         "internship",
