@@ -118,3 +118,9 @@ This pull request includes several changes to improve the functionality and read
 
 * [`.github/workflows/run-container.yml`](diffhunk://#diff-9d8fa071698624d0a009b95095bdbb9802888955407a82532e59666535968260L9-R9): Updated the cron schedule to run every 4 hours instead of every 2 hours.
 
+## [1.4.1] - 2025-02-01
+- Merged PR #9 by @MarcChen: fix : enable headless mode using selenium
+This pull request includes a small change to the `main.py` file. The change involves removing the `debug=True` parameter from the `setup_driver` function call.
+
+* [`main.py`](diffhunk://#diff-b10564ab7d2c520cdd0243874879fb0a782862c3c902ab535faabe57d5a505e1L54-R54): Removed the `debug=True` parameter from the `setup_driver` function call.
+
