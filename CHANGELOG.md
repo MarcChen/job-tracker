@@ -124,3 +124,7 @@ This pull request includes a small change to the `main.py` file. The change invo
 
 * [`main.py`](diffhunk://#diff-b10564ab7d2c520cdd0243874879fb0a782862c3c902ab535faabe57d5a505e1L54-R54): Removed the `debug=True` parameter from the `setup_driver` function call.
 
+## [1.4.2] - 2025-02-01
+- Merged PR #10 by @MarcChen: Fix: Restore SMS Sending Functionality
+This pull request includes a small change to the `main.py` file. The change re-enables the sending of SMS messages by uncommenting the `sms_client.send_sms(sms_message)` and `time.sleep(1)` lines.
+
