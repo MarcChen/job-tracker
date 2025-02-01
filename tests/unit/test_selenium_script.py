@@ -28,10 +28,11 @@ def airfrance_scraper():
             url="http://airfrance.example.com",
             keyword="test",
             contract_type="CDI",
+            include_filters=["developer"],  # <-- Non-empty include filter
+            exclude_filters=[],
         )
         scraper.driver = MagicMock()
         return scraper
-
 
 # Tests for VIEJobScraper
 def test_vie_setup_driver():
@@ -89,20 +90,30 @@ def test_vie_extract_total_offers(vie_scraper):
 
 # Tests for AirFranceJobScraper
 def test_airfrance_load_all_offers(airfrance_scraper):
-    airfrance_scraper.driver.find_element.return_value = MagicMock()
-    airfrance_scraper.driver.find_elements.return_value = [MagicMock()] * 10
+    # Mock a single "offer" element
+    mock_offer = MagicMock()
+    # The internal link element with text containing "developer" to pass the filter
+    mock_title_link = MagicMock()
+    mock_title_link.text = "CDI developer"
+    mock_title_link.get_attribute.return_value = "http://fake-offer-url"
+    # So that offer.find_element(By.CLASS_NAME, "ts-offer-list-item__title-link") returns mock_title_link
+    mock_offer.find_element.return_value = mock_title_link
+
+    # Now the driver finds 10 identical offers:
+    airfrance_scraper.driver.find_elements.return_value = [mock_offer] * 10
 
     with patch("selenium_script.WebDriverWait") as mock_wait:
         mock_wait.return_value.until.side_effect = [
-            MagicMock(),  # Cookie button
+            MagicMock(),        # Cookie button
             MagicMock(text="50"),  # Total offers element
-            MagicMock(),  # Offers list
-            MagicMock(),  # Next button (page 1)
-            Exception(),  # No more pages
+            MagicMock(),        # Offers list
+            MagicMock(),        # Next button (page 1)
+            Exception(),        # No more pages
         ]
         airfrance_scraper.load_all_offers()
 
     assert airfrance_scraper.total_offers == 50
+    # Now we have 10 because the "developer" filter was matched by "CDI developer"
     assert len(airfrance_scraper.offers_url) == 10
 
 
