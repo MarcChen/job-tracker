@@ -2,14 +2,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from notion_client import NotionClient
+from src.notion_client import NotionClient
 
 
 @pytest.fixture
 def notion_client():
-    return NotionClient(
-        notion_api_key="fake_api_key", database_id="fake_database_id"
-    )
+    return NotionClient(notion_api_key="fake_api_key", database_id="fake_database_id")
 
 
 @patch("notion_client.requests.post")
@@ -19,11 +17,7 @@ def test_title_exists(mock_post, notion_client):
     mock_response.status_code = 200
     mock_response.json.return_value = {
         "results": [
-            {
-                "properties": {
-                    "Title": {"title": [{"text": {"content": "Test Title"}}]}
-                }
-            }
+            {"properties": {"Title": {"title": [{"text": {"content": "Test Title"}}]}}}
         ]
     }
     mock_post.return_value = mock_response
@@ -38,9 +32,7 @@ def test_title_exists(mock_post, notion_client):
 @patch("notion_client.requests.post")
 def test_create_page(mock_post, notion_client):
     # Mock response for title existence check
-    mock_post.return_value = MagicMock(
-        status_code=200, json=lambda: {"results": []}
-    )
+    mock_post.return_value = MagicMock(status_code=200, json=lambda: {"results": []})
 
     # Mock response for page creation
     mock_post.return_value = MagicMock(

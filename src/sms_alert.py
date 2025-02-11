@@ -91,13 +91,9 @@ class SMSAPI:
             ServerError: For HTTP 500 error.
         """
         error_map: dict[int, SMSAPIError] = {
-            400: MissingParameter(
-                "One of the mandatory parameters is missing."
-            ),
+            400: MissingParameter("One of the mandatory parameters is missing."),
             402: TooManySMS("Too many SMS messages sent in a short time."),
-            403: ServiceNotEnabled(
-                "Service not activated, or incorrect login/key."
-            ),
+            403: ServiceNotEnabled("Service not activated, or incorrect login/key."),
             500: ServerError("Server error, please try again later."),
         }
 
