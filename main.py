@@ -1,4 +1,5 @@
 import os
+import time
 
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
@@ -33,6 +34,8 @@ if __name__ == "__main__":
         "science",
         "deep learning",
         "deep",
+        "software",
+        "developer",
         "learning",
         "neural networks",
         "computer vision",
@@ -109,7 +112,6 @@ if __name__ == "__main__":
             task_apple = progress.add_task(
                 "[green]Scraping Apple offers...", total=None
             )
-            scraper_apple.load_all_offers()
             data_apple = scraper_apple.scrape()
             progress.remove_task(task_apple)
     finally:
@@ -185,4 +187,4 @@ if __name__ == "__main__":
                     progress.advance(task)
 
     except Exception as e:
-        print(f"Error processing scraped job offers: {e}")
+        raise ValueError(f"Error processing job offers: {e}")

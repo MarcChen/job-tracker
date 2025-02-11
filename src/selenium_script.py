@@ -1,5 +1,7 @@
+from curses import raw
 import random
 import time
+import warnings
 from typing import Dict, List, Union
 
 from selenium import webdriver
@@ -50,7 +52,11 @@ class JobScraperBase:
     def validate_offer(self, offer: dict) -> bool:
         """Ensure required fields are present."""
         required_fields = ["Title", "Company", "Location", "Source"]
-        return all(offer[field] != "N/A" for field in required_fields)
+        missing_fields = [field for field in required_fields if offer[field] == "N/A"]
+        if missing_fields:
+            warnings.warn("Offer missing fields {}: {}".format(missing_fields, offer))
+            return False
+        return True
 
     def load_all_offers(self) -> None:
         """
@@ -96,7 +102,6 @@ class JobScraperBase:
         validated_offers = [
             offer for offer in raw_offers if self.validate_offer(offer)
         ]
-
         return {
             "total_offers": self.extract_total_offers(),
             "offers": validated_offers,
@@ -239,7 +244,7 @@ class VIEJobScraper(JobScraperBase):
                 )
                 offers.append(offer_data)
             except Exception as e:
-                print(f"Error extracting data for an offer: {e}")
+                warnings.warn(f"Error extracting data for an offer: {e}")
         return offers
 
     def extract_total_offers(self) -> Union[str, int]:
@@ -392,8 +397,7 @@ class AirFranceJobScraper(JobScraperBase):
                     break
 
         except Exception as e:
-            print(f"Error loading offers: {str(e)}")
-            raise  # Re-raise exception to see full traceback
+            raise ValueError(f"Error loading offers: {str(e)}")
 
         print("Finished loading all available offers.")
         print(f"Total after filters : {len(self.offers_url)}")
@@ -421,6 +425,7 @@ class AirFranceJobScraper(JobScraperBase):
                     return text.split(split_text)[index].strip()
                 return text.strip()
             except (NoSuchElementException, IndexError, AttributeError):
+                warnings.warn(f"Error extracting element: {value}")
                 return "N/A"
 
         offers = []
@@ -486,7 +491,7 @@ class AirFranceJobScraper(JobScraperBase):
                 )
                 offers.append(offer_data)
             except Exception as e:
-                print(f"Error extracting data for an offer: {e}")
+                raise ValueError(f"Error extracting data for an offer: {e}")
         return offers
 
     def extract_total_offers(self) -> Union[str, int]:
@@ -639,8 +644,7 @@ class AppleJobScraper(JobScraperBase):
                     break
 
         except Exception as e:
-            print(f"Error loading offers: {str(e)}")
-            raise
+            raise ValueError(f"Error loading offers: {e}")
 
         print(f"TOTAL OFFERS : {len(self.offers_url)}")
         print("Finished loading all available offers.")
@@ -707,12 +711,13 @@ class AppleJobScraper(JobScraperBase):
                             ]
                         ),
                         "URL": offer_url,
+                        "Company": "Apple",
                         "Source": "Apple",
                     }
                 )
                 offers.append(offer_data)
             except Exception as e:
-                print(f"Error extracting data for an offer: {e}")
+                raise ValueError(f"Error extracting data for an offer: {e}")
         return offers
 
     def extract_total_offers(self) -> int:
