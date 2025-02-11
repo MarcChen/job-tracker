@@ -1,0 +1,70 @@
+name: Validate PR and Run Tests
+
+permissions:
+  contents: read
+  pull-requests: read
+
+on:
+  pull_request:
+    types: [labeled, unlabeled, opened, edited, synchronize, closed]
+
+jobs:
+  validate-pr:
+    name: Validate PR Labels
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Validate PR labels
+        run: |
+          # Extract labels using jq
+          labels=$(echo '${{ toJson(github.event.pull_request.labels) }}' | jq -r '.[].name')
+
+          # Check if no labels were found
+          if [ -z "$labels" ]; then
+            echo "Error: No labels found on this pull request."
+            exit 1
+          fi
+
+          # Check if any label matches major, minor, or patch
+          if echo "$labels" | grep -Eq "^(major|minor|patch)$"; then
+            echo "Valid label found: $labels"
+          else
+            echo "Error: PR must have one of the following labels: major, minor, or patch."
+            exit 1
+          fi
+
+  run-unit-tests:
+    name: Run Unit Tests
+    runs-on: ubuntu-latest
+    needs: validate-pr
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          export PATH="$HOME/.local/bin:$PATH"
+
+      - name: Install dependencies
+        run: |
+          poetry install
+
+      - name: Check code formatting and linting
+        run: |
+          poetry run black --check .
+          poetry run flake8 .
+          poetry run isort --check-only .
+
+      - name: Run pytest for unit tests
+        run: |
+          poetry run pytest tests/unit --maxfail=1
