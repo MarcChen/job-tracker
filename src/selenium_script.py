@@ -1,3 +1,4 @@
+from curses import raw
 import random
 import time
 import warnings
@@ -51,7 +52,11 @@ class JobScraperBase:
     def validate_offer(self, offer: dict) -> bool:
         """Ensure required fields are present."""
         required_fields = ["Title", "Company", "Location", "Source"]
-        return all(offer[field] != "N/A" for field in required_fields)
+        missing_fields = [field for field in required_fields if offer[field] == "N/A"]
+        if missing_fields:
+            warnings.warn("Offer missing fields {}: {}".format(missing_fields, offer))
+            return False
+        return True
 
     def load_all_offers(self) -> None:
         """
@@ -97,7 +102,6 @@ class JobScraperBase:
         validated_offers = [
             offer for offer in raw_offers if self.validate_offer(offer)
         ]
-
         return {
             "total_offers": self.extract_total_offers(),
             "offers": validated_offers,
@@ -707,6 +711,7 @@ class AppleJobScraper(JobScraperBase):
                             ]
                         ),
                         "URL": offer_url,
+                        "Company": "Apple",
                         "Source": "Apple",
                     }
                 )

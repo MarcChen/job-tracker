@@ -34,6 +34,8 @@ if __name__ == "__main__":
         "science",
         "deep learning",
         "deep",
+        "software",
+        "developer",
         "learning",
         "neural networks",
         "computer vision",
@@ -110,7 +112,6 @@ if __name__ == "__main__":
             task_apple = progress.add_task(
                 "[green]Scraping Apple offers...", total=None
             )
-            scraper_apple.load_all_offers()
             data_apple = scraper_apple.scrape()
             progress.remove_task(task_apple)
     finally:
