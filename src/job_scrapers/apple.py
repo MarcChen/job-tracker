@@ -7,7 +7,7 @@ from typing import List, Dict, Union
 from selenium.common.exceptions import NoSuchElementException
 import time
 import random
-import warnings
+
 
 class AppleJobScraper(JobScraperBase):
     def __init__(
@@ -34,7 +34,7 @@ class AppleJobScraper(JobScraperBase):
         self.exclude_filters = exclude_filters
         self.debug = debug
 
-    def load_all_offers(self) -> None:
+    def load_all_offers(self) -> None:  # noqa: C901
         """
         Loads all available offers from the specified URL and extracts their URLs.
         This method navigates to the URL specified in the instance, handles the cookie consent popup if present,

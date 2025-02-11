@@ -1,14 +1,16 @@
 # tests/unit/test_selenium_script.py
 
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as EC
 
-from selenium_script import (AirFranceJobScraper, AppleJobScraper,
-                             JobScraperBase, VIEJobScraper, setup_driver)
+from src.job_scrapers.airfrance import AirFranceJobScraper
+from src.job_scrapers.apple import AppleJobScraper
+from src.job_scrapers.vie import VIEJobScraper
+from src.job_scrapers.job_scraper_base import JobScraperBase
+from src.scraper import setup_driver
 
 
 # Fixtures for both scrapers

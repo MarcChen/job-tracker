@@ -1,9 +1,4 @@
-import os
-import time
 
-from rich.progress import Progress, SpinnerColumn, TextColumn
-
-from src.notion_client import NotionClient
 from src.scraper import scrape_all_offers, setup_driver
 from src.offer_processor import OfferProcessor
 

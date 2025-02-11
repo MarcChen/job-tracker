@@ -9,6 +9,7 @@ import time
 import random
 import warnings
 
+
 class AirFranceJobScraper(JobScraperBase):
     def __init__(
         self,
@@ -37,7 +38,7 @@ class AirFranceJobScraper(JobScraperBase):
         self.exclude_filters = exclude_filters
         self.debug = debug
 
-    def load_all_offers(self) -> None:
+    def load_all_offers(self) -> None:  # noqa: C901
         try:
             self.driver.get(self.url)
             # Handle cookies

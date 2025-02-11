@@ -1,9 +1,10 @@
 from src.notion_client import NotionClient
 from src.sms_alert import SMSAPI
-import os 
-from typing import Dict, Any, List, Union
+import os
+from typing import Dict, Any
 import time
-from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.progress import Progress
+
 
 class OfferProcessor:
     """

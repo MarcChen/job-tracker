@@ -1,6 +1,8 @@
 from typing import Dict, List, Union
 import warnings
 from selenium import webdriver
+from src.scraper import setup_driver
+
 
 class JobScraperBase:
     def __init__(
@@ -9,6 +11,7 @@ class JobScraperBase:
         driver: webdriver.Chrome = None,
         include_filters: List[str] = None,
         exclude_filters: List[str] = None,
+        debug: bool = False,
     ):
         """
         Initialize the JobScraperBase class.
@@ -17,7 +20,7 @@ class JobScraperBase:
             url (str): The URL of the job listing page to scrape.
         """
         self.url = url
-        self.driver = setup_driver() if None else driver
+        self.driver = setup_driver(debug=self.debug) if None else driver
 
     def _init_offer_dict(self) -> Dict[str, Union[str, int]]:
         """Initialize a standardized offer dictionary with default values."""
