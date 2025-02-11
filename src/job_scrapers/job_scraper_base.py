@@ -29,6 +29,8 @@ class JobScraperBase:
             "Company": "N/A",
             "Location": "N/A",
             "Contract Type": "N/A",
+            "Experience Level": "N/A",
+            "Salary": "N/A",
             "Duration": "N/A",
             "Views": "N/A",
             "Candidates": "N/A",

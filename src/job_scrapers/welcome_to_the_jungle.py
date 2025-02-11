@@ -1,3 +1,4 @@
+from calendar import c
 import random
 import time
 from typing import Dict, List, Union
@@ -72,37 +73,60 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
             )
             print(f"Total offers found: {self.total_offers}")
 
-            # Find all offer rows (adjusted to list items inside the offers container)
-            offer_rows = self.driver.find_elements(
-                By.CSS_SELECTOR, "li[data-testid='search-results-list-item-wrapper']"
-            )
-            print(f"Found {len(offer_rows)} offer rows")
-
             loaded_offers = 0
-            for row in offer_rows:
-                try:
-                    title_link = row.find_element(By.CSS_SELECTOR, "a")
-                    job_title = title_link.text
-                    if self.include_filters and not any(
-                        keyword.lower() in job_title.lower() for keyword in self.include_filters
-                    ):
-                        print(f"Skipping offer '{job_title}' (does not match include filters)")
-                        continue
-                    if self.exclude_filters and any(
-                        keyword.lower() in job_title.lower() for keyword in self.exclude_filters
-                    ):
-                        print(f"Skipping offer '{job_title}' (matches exclude filters)")
-                        continue
-                    self.offers_url.append(title_link.get_attribute("href"))
-                    loaded_offers += 1
+            while loaded_offers < self.total_offers:
+                offer_rows = self.driver.find_elements(
+                    By.CSS_SELECTOR, "li[data-testid='search-results-list-item-wrapper']"
+                )
+                for row in offer_rows:
+                    try:
+                        loaded_offers += 1
+                        job_link = row.find_element(By.CSS_SELECTOR, "a[mode='grid'].sc-dnvZjJ.dhlcJw")
+                        job_title = row.find_element(By.CSS_SELECTOR, "a h4 div[role='mark']").text
+                        contrat_type = row.find_element(By.CSS_SELECTOR, "div[variant='default'][w='fit-content'].sc-eXsaLi.jsMyjk span").text
+                        if self.include_filters and not any(
+                            keyword.lower() in job_title.lower()  for keyword in self.include_filters
+                        ):
+                            print(f"Skipping offer '{job_title}' (does not match include filters)")
+                            continue
+                        if self.exclude_filters and any(
+                            keyword.lower() in job_title.lower() or keyword.lower() in contrat_type.lower() for keyword in self.exclude_filters
+                        ):
+                            print(f"Skipping offer '{job_title}' (matches exclude filters)")
+                            continue
+                        self.offers_url.append(job_link.get_attribute("href"))
+                    except Exception as e:
+                        print(f"Error processing row: {e}")
+
+                print(f"Loaded {loaded_offers} offers")
+
+                if loaded_offers >= self.total_offers:
+                    break
+                
+                try :
+                    # Locate the pagination container and its last <li> element (which contains the "next" button)
+                    pagination = self.driver.find_element(By.CSS_SELECTOR, "ul.sc-mkoLC.cDMQpP")
+                    next_button_li = pagination.find_elements(By.TAG_NAME, "li")[-1]
+                    # Scroll the last <li> into view
+                    self.driver.execute_script(
+                        "arguments[0].scrollIntoView({block: 'center', inline: 'center'});",
+                        next_button_li,
+                    )
+                    # Wait for the "next" button to be clickable and click it
+                    next_button = WebDriverWait(self.driver, 10).until(
+                        EC.element_to_be_clickable((By.CSS_SELECTOR, "ul.sc-mkoLC.cDMQpP li:last-child a"))
+                    )
+                    time.sleep(random.uniform(1, 2))
+                    next_button.click()
+                    time.sleep(random.uniform(1, 3))
                 except Exception as e:
-                    print(f"Error processing row: {e}")
-            print(f"Loaded {loaded_offers} offers")
+                    raise ValueError(f"Error navigating to next page: {e}")
+
         except Exception as e:
             raise ValueError(f"Error loading offers: {e}")
 
-        # print(f"TOTAL OFFERS : {len(self.offers_url)}")
-        # print("Finished loading all available offers.")
+        print(f"TOTAL OFFERS : {len(self.offers_url)}")
+        print("Finished loading all available offers.")
 
     def extract_offers(self) -> List[Dict[str, Union[str, int]]]:
         """
@@ -130,21 +154,42 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
             offer_data = self._init_offer_dict()  # Initialize with defaults
 
             try:
+                desc_perks = extract_element(By.CSS_SELECTOR, "div[data-testid='perks_and_benefits_block']")
+                desc_post = extract_element(By.CSS_SELECTOR, "div[data-testid='job-section-description']")
+                remote_work = extract_element(
+                    By.XPATH,
+                    "//div[@variant='default' and @w='fit-content' and contains(@class, 'sc-eXsaLi') and contains(@class, 'kvWjSS') and .//i[@name='remote']]//span"
+                )
+                lines = []
+                if remote_work != "Télétravail non renseigné":
+                    lines.append(f"Remote : {remote_work}")
+                if desc_perks and desc_perks != "N/A":
+                    lines.append(f" Benefits ! {desc_perks}")
+                if desc_post and desc_post != "N/A":
+                    lines.append(desc_post)
+                combined_desc = "\n".join(lines).strip()
                 offer_data.update({
-                    "Title": extract_element(By.CSS_SELECTOR, "h1[data-testid='job-detail-title']"),
-                    "Reference": extract_element(By.CSS_SELECTOR, "span[data-testid='job-detail-reference']"),
-                    "Location": extract_element(By.CSS_SELECTOR, "p[data-testid='job-detail-location']"),
+                    "Title": extract_element(By.CSS_SELECTOR, "h2.sc-fThUAz.fZjqKw.wui-text"),
+                    "Location": extract_element(By.CSS_SELECTOR, "div.sc-eXsaLi.kvWjSS span.sc-mkoLC.cfCdii"),
+                    "Salary": extract_element(By.CSS_SELECTOR, "div.sc-eXsaLi.kvWjSS", split_text="Salaire :", index=1),
+                    "Experience Level": extract_element(
+                        By.XPATH,
+                        "//div[@variant='default' and @w='fit-content' and contains(@class, 'sc-eXsaLi') and contains(@class, 'kvWjSS') and .//i[@name='suitcase']]",
+                        split_text="Expérience :", index=1
+                    ),
                     "Schedule Type": extract_element(By.CSS_SELECTOR, "div[data-testid='job-detail-schedule']"),
                     "Job Type": extract_element(By.CSS_SELECTOR, "div[data-testid='job-detail-type']"),
-                    "Description": extract_element(By.CSS_SELECTOR, "div[data-testid='job-detail-description']"),
+                    "Description": combined_desc,
                     "URL": offer_url,
-                    "Contract Type": extract_element(By.CSS_SELECTOR, "div[data-testid='job-detail-contract']"),
-                    "Company": "Welcome to the Jungle",
+                    "Contract Type": extract_element(By.CSS_SELECTOR, "div[variant='default'][w='fit-content'].sc-eXsaLi.kvWjSS"),
+                    "Company": extract_element(By.CSS_SELECTOR, "div.sc-bXCLTC.dPVkkc a.sc-fremEr.gbSfGo span"),
                     "Source": "Welcome to the Jungle",
                 })
                 offers.append(offer_data)
                 if self.debug:
-                    print(f"WTJ offer extracted: {offer_data}")
+                    from rich import print
+                    print("Offer extracted from WTJ")
+                    print(offer_data)
             except Exception as e:
                 raise ValueError(f"Error extracting data for an offer: {e}")
 
