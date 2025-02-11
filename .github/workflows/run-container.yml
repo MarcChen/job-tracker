@@ -5,6 +5,7 @@ on:
     workflows: ["Versioning, Tagging, and Docker Image Push"]
     types:
       - completed
+  workflow_dispatch:
   schedule:
     - cron: '0 0 */5 * *'
       branches:
