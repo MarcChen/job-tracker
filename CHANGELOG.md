@@ -128,3 +128,39 @@ This pull request includes a small change to the `main.py` file. The change invo
 - Merged PR #10 by @MarcChen: Fix: Restore SMS Sending Functionality
 This pull request includes a small change to the `main.py` file. The change re-enables the sending of SMS messages by uncommenting the `sms_client.send_sms(sms_message)` and `time.sleep(1)` lines.
 
+## [1.4.3] - 2025-02-11
+- Merged PR #11 by @MarcChen: fixing not raising errors, missing dep, and apple job not correctly formated
+This pull request includes several changes to the `main.py` and `src/selenium_script.py` files to improve error handling, add new keywords, and enhance the data validation process. The most important changes are grouped by their themes below:
+
+### Error Handling Improvements:
+
+* Changed error messages to raise `ValueError` instead of printing them in `main.py` and `src/selenium_script.py` for better exception management. [[1]](diffhunk://#diff-b10564ab7d2c520cdd0243874879fb0a782862c3c902ab535faabe57d5a505e1L188-R190) [[2]](diffhunk://#diff-e8253c08be5d3a0d2d00c1038b0d8459ea66224a0cb76ceb8099f0ccf85aa27eL395-R400) [[3]](diffhunk://#diff-e8253c08be5d3a0d2d00c1038b0d8459ea66224a0cb76ceb8099f0ccf85aa27eL489-R494) [[4]](diffhunk://#diff-e8253c08be5d3a0d2d00c1038b0d8459ea66224a0cb76ceb8099f0ccf85aa27eL642-R647) [[5]](diffhunk://#diff-e8253c08be5d3a0d2d00c1038b0d8459ea66224a0cb76ceb8099f0ccf85aa27eR714-R720)
+
+### Data Validation Enhancements:
+
+* Updated the `validate_offer` method in `src/selenium_script.py` to warn about missing fields and return `False` if any required fields are missing.
+
+### Keyword Additions:
+
+* Added new keywords "software" and "developer" to the list in `main.py` to improve search relevance.
+
+### Code Import Updates:
+
+* Added missing imports in `main.py` and `src/selenium_script.py` to ensure all necessary modules are included. [[1]](diffhunk://#diff-b10564ab7d2c520cdd0243874879fb0a782862c3c902ab535faabe57d5a505e1R2) [[2]](diffhunk://#diff-e8253c08be5d3a0d2d00c1038b0d8459ea66224a0cb76ceb8099f0ccf85aa27eR1-R4)
+
+### Minor Code Cleanups:
+
+* Removed an unnecessary method call in `main.py` to streamline the scraping process.
+* Added warnings for errors encountered during data extraction in `src/selenium_script.py` to provide better debugging information. [[1]](diffhunk://#diff-e8253c08be5d3a0d2d00c1038b0d8459ea66224a0cb76ceb8099f0ccf85aa27eL242-R247) [[2]](diffhunk://#diff-e8253c08be5d3a0d2d00c1038b0d8459ea66224a0cb76ceb8099f0ccf85aa27eR428)This pull request includes several changes to improve error handling and logging in `main.py` and `src/selenium_script.py`. The most important changes involve replacing print statements with exceptions and warnings for better error management.
+
+Error handling improvements:
+
+* [`main.py`](diffhunk://#diff-b10564ab7d2c520cdd0243874879fb0a782862c3c902ab535faabe57d5a505e1L188-R189): Changed the error message handling in the job offers processing section to raise a `ValueError` instead of printing the error message.
+* [`src/selenium_script.py`](diffhunk://#diff-e8253c08be5d3a0d2d00c1038b0d8459ea66224a0cb76ceb8099f0ccf85aa27eR3): Added `warnings` import and replaced print statements with `warnings.warn` for non-critical errors during data extraction. [[1]](diffhunk://#diff-e8253c08be5d3a0d2d00c1038b0d8459ea66224a0cb76ceb8099f0ccf85aa27eR3) [[2]](diffhunk://#diff-e8253c08be5d3a0d2d00c1038b0d8459ea66224a0cb76ceb8099f0ccf85aa27eL242-R243) [[3]](diffhunk://#diff-e8253c08be5d3a0d2d00c1038b0d8459ea66224a0cb76ceb8099f0ccf85aa27eR424)
+* [`src/selenium_script.py`](diffhunk://#diff-e8253c08be5d3a0d2d00c1038b0d8459ea66224a0cb76ceb8099f0ccf85aa27eL395-R396): Replaced print statements with `ValueError` exceptions for critical errors during the loading of offers. [[1]](diffhunk://#diff-e8253c08be5d3a0d2d00c1038b0d8459ea66224a0cb76ceb8099f0ccf85aa27eL395-R396) [[2]](diffhunk://#diff-e8253c08be5d3a0d2d00c1038b0d8459ea66224a0cb76ceb8099f0ccf85aa27eL642-R643) [[3]](diffhunk://#diff-e8253c08be5d3a0d2d00c1038b0d8459ea66224a0cb76ceb8099f0ccf85aa27eL715-R715)
+
+Additionally, minor improvements include importing necessary modules:
+
+* [`main.py`](diffhunk://#diff-b10564ab7d2c520cdd0243874879fb0a782862c3c902ab535faabe57d5a505e1R2): Added `time` import.
+* [`src/selenium_script.py`](diffhunk://#diff-e8253c08be5d3a0d2d00c1038b0d8459ea66224a0cb76ceb8099f0ccf85aa27eR3): Added `warnings` import.
+
