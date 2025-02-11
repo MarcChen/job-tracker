@@ -1,4 +1,5 @@
 import os
+import time
 
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
@@ -185,4 +186,4 @@ if __name__ == "__main__":
                     progress.advance(task)
 
     except Exception as e:
-        print(f"Error processing scraped job offers: {e}")
+        raise ValueError(f"Error processing job offers: {e}")
