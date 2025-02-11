@@ -164,3 +164,27 @@ Additionally, minor improvements include importing necessary modules:
 * [`main.py`](diffhunk://#diff-b10564ab7d2c520cdd0243874879fb0a782862c3c902ab535faabe57d5a505e1R2): Added `time` import.
 * [`src/selenium_script.py`](diffhunk://#diff-e8253c08be5d3a0d2d00c1038b0d8459ea66224a0cb76ceb8099f0ccf85aa27eR3): Added `warnings` import.
 
+## [1.5.0] - 2025-02-11
+- Merged PR #12 by @MarcChen: Feature : Code refacto 
+This pull request introduces several significant changes to the codebase, focusing on improving the testing workflows, refactoring the main application logic, and enhancing the Docker setup. Below are the most important changes grouped by their themes:
+
+### Workflow and Testing Improvements:
+* [`.github/workflows/validate-PR.yml`](diffhunk://#diff-14b4ce75de35f234703c58969492cd5f2871cb68be1344d95b431882c5426e1dR1-R70): Added a new workflow to validate PR labels and run unit tests, replacing the old `test.yml`. The new workflow includes steps for checking PR labels and running unit tests with Poetry.
+* [`.flake8`](diffhunk://#diff-6951dbb399883798a226c1fb496fdb4183b1ab48865e75eddecf6ceb6cf46442R1-R11): Added a new configuration file for Flake8 to enforce code style standards, including setting the maximum line length and ignoring specific errors.
+
+### Refactoring and Code Simplification:
+* [`main.py`](diffhunk://#diff-b10564ab7d2c520cdd0243874879fb0a782862c3c902ab535faabe57d5a505e1L1-L28): Refactored the main script to use a new `OfferProcessor` class and a `scrape_all_offers` function, significantly simplifying the main logic. Removed direct handling of environment variables and job scrapers. [[1]](diffhunk://#diff-b10564ab7d2c520cdd0243874879fb0a782862c3c902ab535faabe57d5a505e1L1-L28) [[2]](diffhunk://#diff-b10564ab7d2c520cdd0243874879fb0a782862c3c902ab535faabe57d5a505e1L56-R42)
+* `src/job_scrapers/`Splited all the existing Scraper Class to singles files in a dedicated subfolder `src/job_scrapers/`
+
+### Docker and Build Enhancements:
+* [`Dockerfile`](diffhunk://#diff-dd2c0eb6ea5cfc6c4bd4eac30934e2d5746747af48fef6da689e85b752f39557L3-R22): Updated the Dockerfile to use Poetry for dependency management instead of pip, and adjusted the setup commands accordingly.
+* [`Makefile`](diffhunk://#diff-76ed074a9305c04054cdebb9e9aad2d818052b07091de1f20cad0bbac34ffb52R1-R14): Added new targets for launching, stopping, and restarting the Chromium container, as well as building and launching the Docker image.
+
+### Configuration and Dependency Management:
+* [`pyproject.toml`](diffhunk://#diff-50c86b7ed8ac2cf95bd48334961bf0530cdc77b5a56f852c5c61b89d735fd711R1-R29): Introduced a new `pyproject.toml` file for managing project dependencies using Poetry, including both main and development dependencies.
+
+### Script Enhancements:
+* [`scripts/launch_chromium.sh`](diffhunk://#diff-6470d7917b15538a9fed2f1ba28e996f4a1572b25aa701b406500d0db54c7b12R1-R35): Added a script to launch a Selenium Chromium container and set up the environment variables from a `.env` file.
+* [`scripts/restart_chromium.sh`](diffhunk://#diff-b1b60e635feddf90fa48ece2dcaea537506d755241cc8a1a901160939cda08b6R1-R8): Added a script to restart the Selenium Chromium container.
+* [`scripts/stop_chromium.sh`](diffhunk://#diff-169a1615846ababcce29b6e5287af016aed54c54d17671494181445b46a1933fR1-R9): Added a script to stop the Selenium Chromium container.
+
