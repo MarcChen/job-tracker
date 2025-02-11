@@ -1,28 +1,22 @@
 FROM selenium/standalone-chromium:132.0
 
-# Switch to root user to install Python
 USER root
 
-# Set the working directory in the container
 WORKDIR /app
 
-# Copy the requirements.txt file into the container at /app
-COPY requirements.txt /app/
+# RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies with --break-system-packages flag
-RUN pip install --break-system-packages -r requirements.txt
+RUN curl -sSL https://install.python-poetry.org | python3 - && \
+    mv ~/.local/bin/poetry /usr/local/bin/poetry
 
-# Copy the src folder into the container at /app
+COPY pyproject.toml /app/
+
 COPY src/ /app/src/
 
-# Set PYTHONPATH so Python can find your src folder
-ENV PYTHONPATH=/app/src
-
-# Copy main.py file 
 COPY main.py /app/
 
-# Switch back to the seluser for running Selenium
+RUN poetry install --only main
+
 USER seluser
 
-# Run the Python script
-CMD ["python3", "/app/main.py"]
+CMD ["poetry", "run", "python", "/app/main.py"]
