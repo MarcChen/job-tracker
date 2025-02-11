@@ -8,8 +8,8 @@ from selenium.webdriver.common.by import By
 
 from src.job_scrapers.airfrance import AirFranceJobScraper
 from src.job_scrapers.apple import AppleJobScraper
-from src.job_scrapers.vie import VIEJobScraper
 from src.job_scrapers.job_scraper_base import JobScraperBase
+from src.job_scrapers.vie import VIEJobScraper
 from src.scraper import setup_driver
 
 

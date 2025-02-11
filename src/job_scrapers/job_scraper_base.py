@@ -1,6 +1,8 @@
-from typing import Dict, List, Union
 import warnings
+from typing import Dict, List, Union
+
 from selenium import webdriver
+
 from src.scraper import setup_driver
 
 
@@ -54,9 +56,7 @@ class JobScraperBase:
         """
         Load all offers by repeatedly clicking 'Voir Plus d'Offres' with added randomness.
         """
-        raise NotImplementedError(
-            "This method should be implemented by subclasses"
-        )
+        raise NotImplementedError("This method should be implemented by subclasses")
 
     def extract_offers(self) -> List[Dict[str, Union[str, int]]]:
         """
@@ -65,9 +65,7 @@ class JobScraperBase:
         Returns:
             List[Dict[str, Union[str, int]]]: A list of dictionaries containing offer details.
         """
-        raise NotImplementedError(
-            "This method should be implemented by subclasses"
-        )
+        raise NotImplementedError("This method should be implemented by subclasses")
 
     def extract_total_offers(self) -> Union[str, int]:
         """
@@ -76,9 +74,7 @@ class JobScraperBase:
         Returns:
             Union[str, int]: The total offers count as an integer, or 'Unknown' if an error occurs.
         """
-        raise NotImplementedError(
-            "This method should be implemented by subclasses"
-        )
+        raise NotImplementedError("This method should be implemented by subclasses")
 
     def scrape(
         self,
@@ -91,9 +87,7 @@ class JobScraperBase:
         """
         self.load_all_offers()
         raw_offers = self.extract_offers()
-        validated_offers = [
-            offer for offer in raw_offers if self.validate_offer(offer)
-        ]
+        validated_offers = [offer for offer in raw_offers if self.validate_offer(offer)]
         return {
             "total_offers": self.extract_total_offers(),
             "offers": validated_offers,

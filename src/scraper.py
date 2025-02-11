@@ -1,10 +1,11 @@
+from rich.progress import Progress, SpinnerColumn, TextColumn
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
-from rich.progress import Progress, SpinnerColumn, TextColumn
-from src.job_scrapers.vie import VIEJobScraper
+
 from src.job_scrapers.airfrance import AirFranceJobScraper
 from src.job_scrapers.apple import AppleJobScraper
+from src.job_scrapers.vie import VIEJobScraper
 
 
 def scrape_all_offers(driver, include_filters, exclude_filters, debug=False):
@@ -22,17 +23,40 @@ def scrape_all_offers(driver, include_filters, exclude_filters, debug=False):
             - "offers": A list containing all the offers scraped from the VIE, Air France, and Apple job portals.
     """
     url_vie = "https://mon-vie-via.businessfrance.fr/offres/recherche?query=Data"
-    url_air_france = "https://recrutement.airfrance.com/offre-de-emploi/liste-offres.aspx"
+    url_air_france = (
+        "https://recrutement.airfrance.com/offre-de-emploi/liste-offres.aspx"
+    )
     url_apple = "https://jobs.apple.com/fr-fr/search?sort=relevance&location=france-FRAC+singapore-SGP+hong-kong-HKGC+taiwan-TWN"
 
-    scraper_vie = VIEJobScraper(url_vie, driver=driver, include_filters=include_filters, exclude_filters=exclude_filters, debug=debug)
-    scraper_airfrance = AirFranceJobScraper(
-        url=url_air_france, keyword="", contract_type="CDI",
-        driver=driver, include_filters=include_filters, exclude_filters=exclude_filters, debug=debug
+    scraper_vie = VIEJobScraper(
+        url_vie,
+        driver=driver,
+        include_filters=include_filters,
+        exclude_filters=exclude_filters,
+        debug=debug,
     )
-    scraper_apple = AppleJobScraper(url=url_apple, driver=driver, include_filters=include_filters, exclude_filters=exclude_filters, debug=debug)
+    scraper_airfrance = AirFranceJobScraper(
+        url=url_air_france,
+        keyword="",
+        contract_type="CDI",
+        driver=driver,
+        include_filters=include_filters,
+        exclude_filters=exclude_filters,
+        debug=debug,
+    )
+    scraper_apple = AppleJobScraper(
+        url=url_apple,
+        driver=driver,
+        include_filters=include_filters,
+        exclude_filters=exclude_filters,
+        debug=debug,
+    )
 
-    with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), transient=True) as progress:
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        transient=True,
+    ) as progress:
         task_air = progress.add_task("[cyan]Scraping Air France offers...", total=None)
         data_Air_France = scraper_airfrance.scrape()
         progress.remove_task(task_air)
@@ -46,8 +70,12 @@ def scrape_all_offers(driver, include_filters, exclude_filters, debug=False):
         progress.remove_task(task_apple)
 
     # Merge scraped data and return
-    total_offers = data_VIE['total_offers'] + data_Air_France['total_offers'] + data_apple['total_offers']
-    offers = data_VIE['offers'] + data_Air_France['offers'] + data_apple['offers']
+    total_offers = (
+        data_VIE["total_offers"]
+        + data_Air_France["total_offers"]
+        + data_apple["total_offers"]
+    )
+    offers = data_VIE["offers"] + data_Air_France["offers"] + data_apple["offers"]
     print(f"All scrapped offers : {offers}") if debug else None
     return {"total_offers": total_offers, "offers": offers}
 

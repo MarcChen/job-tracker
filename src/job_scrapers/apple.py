@@ -1,12 +1,14 @@
-from src.job_scrapers.job_scraper_base import JobScraperBase
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from typing import List, Dict, Union
-from selenium.common.exceptions import NoSuchElementException
-import time
 import random
+import time
+from typing import Dict, List, Union
+
+from selenium import webdriver
+from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
+
+from src.job_scrapers.job_scraper_base import JobScraperBase
 
 
 class AppleJobScraper(JobScraperBase):
@@ -51,9 +53,7 @@ class AppleJobScraper(JobScraperBase):
             # Handle cookies - adjust selector if different on the actual page
             try:
                 WebDriverWait(self.driver, 3).until(
-                    EC.element_to_be_clickable(
-                        (By.ID, "didomi-notice-agree-button")
-                    )
+                    EC.element_to_be_clickable((By.ID, "didomi-notice-agree-button"))
                 ).click()
                 time.sleep(random.uniform(1, 2))
             except Exception:
@@ -115,9 +115,7 @@ class AppleJobScraper(JobScraperBase):
                                 print(f"Skipping offer '{job_title}' ...")
                                 continue
                             else:
-                                self.offers_url.append(
-                                    title_link.get_attribute("href")
-                                )
+                                self.offers_url.append(title_link.get_attribute("href"))
                         except Exception as e:
                             print(f"Error extracting link from row: {str(e)}")
 
@@ -141,9 +139,7 @@ class AppleJobScraper(JobScraperBase):
                         "arguments[0].scrollIntoView({block: 'center', inline: 'center'});",
                         next_button,
                     )
-                    self.driver.execute_script(
-                        "arguments[0].click();", next_button
-                    )
+                    self.driver.execute_script("arguments[0].click();", next_button)
                     time.sleep(random.uniform(1.5, 2.5))
 
                 except Exception:
@@ -164,16 +160,10 @@ class AppleJobScraper(JobScraperBase):
             List[Dict[str, Union[str, int]]]: A list of dictionaries containing offer details.
         """
 
-        def extract_element(
-            by, value, attribute=None, split_text=None, index=None
-        ):
+        def extract_element(by, value, attribute=None, split_text=None, index=None):
             try:
                 element = self.driver.find_element(by, value)
-                text = (
-                    element.get_attribute(attribute)
-                    if attribute
-                    else element.text
-                )
+                text = element.get_attribute(attribute) if attribute else element.text
                 if split_text and index is not None:
                     return text.split(split_text)[index].strip()
                 return text.strip()
@@ -196,9 +186,7 @@ class AppleJobScraper(JobScraperBase):
                         "Location": extract_element(
                             By.ID, "job-location-name", split_text=",", index=0
                         ),  # Retrieve City
-                        "Schedule Type": extract_element(
-                            By.ID, "jobWeeklyHours"
-                        ),
+                        "Schedule Type": extract_element(By.ID, "jobWeeklyHours"),
                         "Job Type": extract_element(By.ID, "job-team-name"),
                         "Description": "\n".join(
                             [
@@ -207,14 +195,10 @@ class AppleJobScraper(JobScraperBase):
                                 + extract_element(By.ID, "jd-description")
                                 + "\n",
                                 "Minimum Qualification\n"
-                                + extract_element(
-                                    By.ID, "jd-minimum-qualifications"
-                                )
+                                + extract_element(By.ID, "jd-minimum-qualifications")
                                 + "\n",
                                 "Preferred Qualification\n"
-                                + extract_element(
-                                    By.ID, "jd-preferred-qualifications"
-                                ),
+                                + extract_element(By.ID, "jd-preferred-qualifications"),
                             ]
                         ),
                         "URL": offer_url,

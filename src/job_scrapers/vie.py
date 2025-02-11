@@ -1,12 +1,14 @@
-from src.job_scrapers.job_scraper_base import JobScraperBase
+import random
+import time
+import warnings
+from typing import Dict, List, Union
+
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from typing import List, Dict, Union
-import time
-import random
-import warnings
+from selenium.webdriver.support.ui import WebDriverWait
+
+from src.job_scrapers.job_scraper_base import JobScraperBase
 
 
 class VIEJobScraper(JobScraperBase):
@@ -50,22 +52,16 @@ class VIEJobScraper(JobScraperBase):
                 # Wait for new offers to load
                 time.sleep(random.uniform(1.5, 2.5))  # Randomized wait
                 WebDriverWait(self.driver, 5).until(
-                    lambda d: len(
-                        d.find_elements(By.CLASS_NAME, "figure-item")
-                    )
+                    lambda d: len(d.find_elements(By.CLASS_NAME, "figure-item"))
                     > previous_count
                 )
 
                 # Check if the count of offers has increased
-                offer_elements = self.driver.find_elements(
-                    By.CLASS_NAME, "figure-item"
-                )
+                offer_elements = self.driver.find_elements(By.CLASS_NAME, "figure-item")
                 current_count = len(offer_elements)
 
                 if current_count == previous_count:
-                    print(
-                        "No new offers detected. Assuming all offers are loaded."
-                    )
+                    print("No new offers detected. Assuming all offers are loaded.")
                     break
                 else:
                     previous_count = current_count
@@ -84,22 +80,17 @@ class VIEJobScraper(JobScraperBase):
             List[Dict[str, Union[str, int]]]: A list of dictionaries containing offer details.
         """
         offers = []
-        offer_elements = self.driver.find_elements(
-            By.CLASS_NAME, "figure-item"
-        )
+        offer_elements = self.driver.find_elements(By.CLASS_NAME, "figure-item")
 
         for offer in offer_elements:
             offer_data = self._init_offer_dict()
             try:
-                time.sleep(
-                    random.uniform(0.1, 0.3)
-                )  # Randomized delay per offer
+                time.sleep(random.uniform(0.1, 0.3))  # Randomized delay per offer
                 title = offer.find_element(By.TAG_NAME, "h2").text
 
                 # Apply inclusion filter: Skip if none of the include_filters are found.
                 if self.include_filters and not any(
-                    keyword.lower() in title.lower()
-                    for keyword in self.include_filters
+                    keyword.lower() in title.lower() for keyword in self.include_filters
                 ):
                     print(
                         f"Skipping offer '{title}' (doesn't match include filters)..."
@@ -108,12 +99,9 @@ class VIEJobScraper(JobScraperBase):
 
                 # Apply exclusion filter: Skip if any of the exclude_filters are found.
                 if self.exclude_filters and any(
-                    keyword.lower() in title.lower()
-                    for keyword in self.exclude_filters
+                    keyword.lower() in title.lower() for keyword in self.exclude_filters
                 ):
-                    print(
-                        f"Skipping offer '{title}' (matches exclude filters)..."
-                    )
+                    print(f"Skipping offer '{title}' (matches exclude filters)...")
                     continue
                 details = offer.find_elements(By.TAG_NAME, "li")
 
@@ -123,24 +111,16 @@ class VIEJobScraper(JobScraperBase):
                         "Company": offer.find_element(
                             By.CLASS_NAME, "organization"
                         ).text,
-                        "Location": offer.find_element(
-                            By.CLASS_NAME, "location"
-                        ).text,
+                        "Location": offer.find_element(By.CLASS_NAME, "location").text,
                         "Contract Type": (
                             details[0].text if len(details) > 0 else "N/A"
                         ),
-                        "Duration": (
-                            details[1].text if len(details) > 1 else "N/A"
-                        ),
+                        "Duration": (details[1].text if len(details) > 1 else "N/A"),
                         "Views": (
-                            int(details[2].text.split()[0])
-                            if len(details) > 2
-                            else 0
+                            int(details[2].text.split()[0]) if len(details) > 2 else 0
                         ),
                         "Candidates": (
-                            int(details[3].text.split()[0])
-                            if len(details) > 3
-                            else 0
+                            int(details[3].text.split()[0]) if len(details) > 3 else 0
                         ),
                         "Source": "Business France",
                     }
@@ -163,9 +143,7 @@ class VIEJobScraper(JobScraperBase):
                 random.uniform(1, 3)
             )  # Randomized delay before accessing total offers count
             total_offers = int(
-                self.driver.find_element(By.CLASS_NAME, "count").text.split()[
-                    0
-                ]
+                self.driver.find_element(By.CLASS_NAME, "count").text.split()[0]
             )
             return total_offers
         except Exception as e:

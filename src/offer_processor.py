@@ -1,9 +1,11 @@
+import os
+import time
+from typing import Any, Dict
+
+from rich.progress import Progress
+
 from src.notion_client import NotionClient
 from src.sms_alert import SMSAPI
-import os
-from typing import Dict, Any
-import time
-from rich.progress import Progress
 
 
 class OfferProcessor:
@@ -16,6 +18,7 @@ class OfferProcessor:
         total_offers (int): Total number of job offers.
         offers (List[dict]): List containing job offer dictionaries.
     """
+
     def __init__(self, data: Dict[str, Any]):
         DATABASE_ID = os.getenv("DATABASE_ID")
         NOTION_API = os.getenv("NOTION_API")
@@ -72,13 +75,15 @@ class OfferProcessor:
                  - Clipping content to 2000 characters for fields like 'Description' or 'Job Type' when necessary.
                  - Creates a new Notion page with the constructed properties using notion_client.create_page.
         """
-        title = offer['Title']
+        title = offer["Title"]
 
         if self.notion_client.title_exists(title):
-            progress.console.log(f"[yellow]Job '{title}' already exists. Skipping...[/yellow]")
+            progress.console.log(
+                f"[yellow]Job '{title}' already exists. Skipping...[/yellow]"
+            )
             progress.advance(task)
         else:
-            if offer['Source'] == "Business France":
+            if offer["Source"] == "Business France":
                 sms_message = (
                     f"New VIE Job Alert!\n"
                     f"Title: {offer['Title']}\n"
@@ -102,24 +107,24 @@ class OfferProcessor:
 
             job_properties = {
                 "Title": {
-                    "title": [
-                        {"type": "text", "text": {"content": offer['Title']}}
-                    ]
+                    "title": [{"type": "text", "text": {"content": offer["Title"]}}]
                 },
-                "Source": {"select": {"name": offer['Source']}},
+                "Source": {"select": {"name": offer["Source"]}},
             }
 
             for field in offer:
-                if field not in ['Title', 'Source'] and offer[field] != 'N/A':
-                    if field in ['Candidates', 'Views']:
+                if field not in ["Title", "Source"] and offer[field] != "N/A":
+                    if field in ["Candidates", "Views"]:
                         job_properties[field] = {"number": offer[field]}
-                    elif field == 'URL':
+                    elif field == "URL":
                         job_properties[field] = {"url": offer[field]}
-                    elif field in ['Description', 'Job Type']:
+                    elif field in ["Description", "Job Type"]:
                         content = offer[field]
                         if len(content) > 2000:
                             content = content[:2000]
-                            print(f"[yellow]Warning: {field} content clipped to 2000 characters.[/yellow]")
+                            print(
+                                f"[yellow]Warning: {field} content clipped to 2000 characters.[/yellow]"
+                            )
                         job_properties[field] = {
                             "rich_text": [
                                 {"type": "text", "text": {"content": content}}
@@ -143,7 +148,9 @@ class OfferProcessor:
         """
         try:
             with Progress() as progress:
-                task = progress.add_task("Processing job offers...", total=len(self.offers))
+                task = progress.add_task(
+                    "Processing job offers...", total=len(self.offers)
+                )
                 for offer in self.offers:
                     self.process_offer(offer, progress, task)
         except Exception as e:

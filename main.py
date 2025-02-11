@@ -1,6 +1,5 @@
-
-from src.scraper import scrape_all_offers, setup_driver
 from src.offer_processor import OfferProcessor
+from src.scraper import scrape_all_offers, setup_driver
 
 if __name__ == "__main__":
     INCLUDE_FILTERS = [

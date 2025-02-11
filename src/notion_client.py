@@ -68,9 +68,7 @@ class NotionClient:
             return None
 
         if self.title_exists(title):
-            print(
-                f"Page with title '{title}' already exists. Skipping creation."
-            )
+            print(f"Page with title '{title}' already exists. Skipping creation.")
             return None
 
         # Convert payload to match Notion database schema

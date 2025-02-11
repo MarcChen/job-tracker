@@ -1,13 +1,15 @@
-from src.job_scrapers.job_scraper_base import JobScraperBase
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from typing import List, Dict, Union
-from selenium.common.exceptions import NoSuchElementException
-import time
 import random
+import time
 import warnings
+from typing import Dict, List, Union
+
+from selenium import webdriver
+from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
+
+from src.job_scrapers.job_scraper_base import JobScraperBase
 
 
 class AirFranceJobScraper(JobScraperBase):
@@ -44,9 +46,7 @@ class AirFranceJobScraper(JobScraperBase):
             # Handle cookies
             try:
                 WebDriverWait(self.driver, 3).until(
-                    EC.element_to_be_clickable(
-                        (By.ID, "didomi-notice-agree-button")
-                    )
+                    EC.element_to_be_clickable((By.ID, "didomi-notice-agree-button"))
                 ).click()
                 time.sleep(random.uniform(1, 2))
                 self.driver.navigate().refresh()
@@ -67,9 +67,7 @@ class AirFranceJobScraper(JobScraperBase):
                 )
 
             if self.contract_type == "":
-                print(
-                    "No contract type provided. Skipping contract type filtering."
-                )
+                print("No contract type provided. Skipping contract type filtering.")
             else:
                 self.driver.find_element(
                     by=By.ID,
@@ -97,9 +95,7 @@ class AirFranceJobScraper(JobScraperBase):
                         (By.CLASS_NAME, "ts-offer-list-item")
                     )
                 )
-                offers = self.driver.find_elements(
-                    By.CLASS_NAME, "ts-offer-list-item"
-                )
+                offers = self.driver.find_elements(By.CLASS_NAME, "ts-offer-list-item")
                 for offer in offers:
                     title_link = offer.find_element(
                         By.CLASS_NAME, "ts-offer-list-item__title-link"
@@ -154,16 +150,10 @@ class AirFranceJobScraper(JobScraperBase):
         """
 
         # Implement the logic specific to AirFrance job offers page
-        def extract_element(
-            by, value, attribute=None, split_text=None, index=None
-        ):
+        def extract_element(by, value, attribute=None, split_text=None, index=None):
             try:
                 element = self.driver.find_element(by, value)
-                text = (
-                    element.get_attribute(attribute)
-                    if attribute
-                    else element.text
-                )
+                text = element.get_attribute(attribute) if attribute else element.text
                 if split_text and index is not None:
                     return text.split(split_text)[index].strip()
                 return text.strip()
@@ -220,9 +210,7 @@ class AirFranceJobScraper(JobScraperBase):
                         ),
                         "Description": "\n".join(
                             [
-                                extract_element(
-                                    By.ID, "fldjobdescription_longtext1"
-                                ),
+                                extract_element(By.ID, "fldjobdescription_longtext1"),
                                 extract_element(
                                     By.ID, "fldjobdescription_description1"
                                 ),
@@ -233,7 +221,9 @@ class AirFranceJobScraper(JobScraperBase):
                     }
                 )
                 offers.append(offer_data)
-                print(f"Air France offer extracted: {offer_data}") if self.debug else None
+                print(
+                    f"Air France offer extracted: {offer_data}"
+                ) if self.debug else None
             except Exception as e:
                 raise ValueError(f"Error extracting data for an offer: {e}")
         return offers
