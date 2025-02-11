@@ -29,7 +29,7 @@ if __name__ == "__main__":
         "apprentice",
         "alternance",
     ]
-    DEBUG = True
+    DEBUG = False
 
     try:
         driver = setup_driver(debug=DEBUG)
