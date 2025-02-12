@@ -89,15 +89,14 @@ class OfferProcessor:
                     f"Title: {offer['Title']}\n"
                     f"Company: {offer['Company']}\n"
                     f"Location: {offer['Location']}\n"
-                    f"Contract Type: {offer['Contract Type']}\n"
-                    f"Source: {offer['Source']}\n"
+                    f"Duration: {offer['Duration']}\n"
                 )
             else:
                 sms_message = (
-                    f"Air France Job Alert!\n"
+                    f"CDI Job Alert!\n"
                     f"Title: {offer['Title']}\n"
-                    f"Job Type: {offer['Job Type']}\n"
-                    f"Job Category: {offer['Job Category']}\n"
+                    f"Company: {offer['Company']}\n"
+                    f"Source: {offer['Source']}\n"
                     f"Location: {offer['Location']}\n"
                     f"Contract Type: {offer['Contract Type']}\n"
                     f"URL: {offer['URL']}\n"

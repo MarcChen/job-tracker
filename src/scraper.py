@@ -6,6 +6,7 @@ from selenium.webdriver.chrome.service import Service
 from src.job_scrapers.airfrance import AirFranceJobScraper
 from src.job_scrapers.apple import AppleJobScraper
 from src.job_scrapers.vie import VIEJobScraper
+from src.job_scrapers.welcome_to_the_jungle import WelcomeToTheJungleJobScraper
 
 
 def scrape_all_offers(driver, include_filters, exclude_filters, debug=False):
@@ -27,6 +28,7 @@ def scrape_all_offers(driver, include_filters, exclude_filters, debug=False):
         "https://recrutement.airfrance.com/offre-de-emploi/liste-offres.aspx"
     )
     url_apple = "https://jobs.apple.com/fr-fr/search?sort=relevance&location=france-FRAC+singapore-SGP+hong-kong-HKGC+taiwan-TWN"
+    url_wtj = "https://www.welcometothejungle.com/fr/jobs?&refinementList%5Bcontract_type%5D%5B%5D=full_time&refinementList%5Bcontract_type%5D%5B%5D=temporary&refinementList%5Bcontract_type%5D%5B%5D=freelance"
 
     scraper_vie = VIEJobScraper(
         url_vie,
@@ -52,6 +54,26 @@ def scrape_all_offers(driver, include_filters, exclude_filters, debug=False):
         debug=debug,
     )
 
+    scraper_wtj_data_engineer = WelcomeToTheJungleJobScraper(
+        url=url_wtj,
+        driver=driver,
+        include_filters=include_filters,
+        exclude_filters=exclude_filters,
+        keyword="data engineer",
+        location="Île-de-France",
+        debug=debug,
+    )
+
+    scraper_wtj_data_ai = WelcomeToTheJungleJobScraper(
+        url=url_wtj,
+        driver=driver,
+        include_filters=include_filters,
+        exclude_filters=exclude_filters,
+        keyword="artificial intelligence",
+        location="Île-de-France",
+        debug=debug,
+    )
+
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
@@ -69,13 +91,33 @@ def scrape_all_offers(driver, include_filters, exclude_filters, debug=False):
         data_apple = scraper_apple.scrape()
         progress.remove_task(task_apple)
 
+        task_wtj = progress.add_task(
+            "[yellow]Scraping Welcome to the Jungle Data Engineer offers...", total=None
+        )
+        data_wtj_data_engineer = scraper_wtj_data_engineer.scrape()
+        progress.remove_task(task_wtj)
+
+        task_wtj_ai = progress.add_task(
+            "[yellow]Scraping Welcome to the Jungle AI offers...", total=None
+        )
+        data_wtj_ai = scraper_wtj_data_ai.scrape()
+        progress.remove_task(task_wtj_ai)
+
     # Merge scraped data and return
     total_offers = (
         data_VIE["total_offers"]
         + data_Air_France["total_offers"]
         + data_apple["total_offers"]
+        + data_wtj_data_engineer["total_offers"]
+        + data_wtj_ai["total_offers"]
     )
-    offers = data_VIE["offers"] + data_Air_France["offers"] + data_apple["offers"]
+    offers = (
+        data_VIE["offers"]
+        + data_Air_France["offers"]
+        + data_apple["offers"]
+        + data_wtj_data_engineer["offers"]
+        + data_wtj_ai["offers"]
+    )
     print(f"All scrapped offers : {offers}") if debug else None
     return {"total_offers": total_offers, "offers": offers}
 
