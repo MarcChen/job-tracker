@@ -207,3 +207,11 @@ This pull request introduces a new job scraper for "Welcome to the Jungle" and i
 ### Unit Testing:
 * [`tests/unit/test_wtj_scraper.py`](diffhunk://#diff-d443dbcfd56c1a71634c169759cf479577397680d64c1af0f0588cd8c2db64b8R1-R70): Added unit tests for the `WelcomeToTheJungleJobScraper` to verify the extraction of total offers and detailed job offers using dummy elements and a mock driver.
 
+## [1.6.1] - 2025-02-12
+- Merged PR #14 by @MarcChen: fix  : intercepted element
+This pull request includes an important change to the `load_all_offers` method in the `src/job_scrapers/welcome_to_the_jungle.py` file to improve the reliability of the web scraping process.
+
+Improvements to web scraping process:
+
+* [`src/job_scrapers/welcome_to_the_jungle.py`](diffhunk://#diff-dc19ee754afa8db50121eb04ed34a9287b7c872332c116bacd113d661596affdR77-R81): Added a wait condition to ensure the invisibility of an element with a high z-index before clicking the clear button. This change helps to avoid potential issues caused by overlapping elements during the interaction.
+
