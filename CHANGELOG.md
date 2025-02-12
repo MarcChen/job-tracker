@@ -215,3 +215,12 @@ Improvements to web scraping process:
 
 * [`src/job_scrapers/welcome_to_the_jungle.py`](diffhunk://#diff-dc19ee754afa8db50121eb04ed34a9287b7c872332c116bacd113d661596affdR77-R81): Added a wait condition to ensure the invisibility of an element with a high z-index before clicking the clear button. This change helps to avoid potential issues caused by overlapping elements during the interaction.
 
+## [1.6.2] - 2025-02-12
+- Merged PR #15 by @MarcChen: fixing intercepted click - 2 
+This pull request includes changes to the `load_all_offers` method in the `src/job_scrapers/welcome_to_the_jungle.py` file to improve the functionality of interacting with the web page elements.
+
+Enhancements to web element interaction:
+
+* Added a step to click the French button if it appears, ensuring the page is in the correct language.
+* Removed the wait for the invisibility of an element with high z-index, streamlining the process of clearing the location input field.
+
