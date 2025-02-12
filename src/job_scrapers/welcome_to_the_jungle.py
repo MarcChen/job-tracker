@@ -1,6 +1,5 @@
 import random
 import time
-import re
 from typing import Dict, List, Union
 
 from selenium import webdriver
@@ -9,7 +8,6 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.common.keys import Keys
 
 from src.job_scrapers.job_scraper_base import JobScraperBase
 
@@ -44,7 +42,7 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
         self.keyword = keyword
         self.location = location
 
-    def load_all_offers(self) -> None:
+    def load_all_offers(self) -> None:  # noqa: C901
         """
         Loads all available offers from the Welcome to the Jungle listing page.
         The method navigates to the URL, waits for the job cards to appear,
@@ -180,7 +178,7 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
         print(f"TOTAL OFFERS : {len(self.offers_url)}")
         print("Finished loading all available offers.")
 
-    def extract_offers(self) -> List[Dict[str, Union[str, int]]]:
+    def extract_offers(self) -> List[Dict[str, Union[str, int]]]:  # noqa: C901
         """
         Extracts detailed data from each job offer page.
         Note: The CSS selectors below are assumed for the job detail pages. They may
@@ -268,6 +266,7 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
                 offers.append(offer_data)
                 if self.debug:
                     from rich import print
+
                     print(offer_data)
             except Exception as e:
                 raise ValueError(f"Error extracting data for an offer: {e}")

@@ -223,6 +223,7 @@ class AirFranceJobScraper(JobScraperBase):
                 offers.append(offer_data)
                 if self.debug:
                     from rich import print
+
                     print(offer_data)
             except Exception as e:
                 raise ValueError(f"Error extracting data for an offer: {e}")
