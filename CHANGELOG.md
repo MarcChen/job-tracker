@@ -188,3 +188,22 @@ This pull request introduces several significant changes to the codebase, focusi
 * [`scripts/restart_chromium.sh`](diffhunk://#diff-b1b60e635feddf90fa48ece2dcaea537506d755241cc8a1a901160939cda08b6R1-R8): Added a script to restart the Selenium Chromium container.
 * [`scripts/stop_chromium.sh`](diffhunk://#diff-169a1615846ababcce29b6e5287af016aed54c54d17671494181445b46a1933fR1-R9): Added a script to stop the Selenium Chromium container.
 
+## [1.6.0] - 2025-02-12
+- Merged PR #13 by @MarcChen: Feature : Added Welcome to the Jungle Website
+This pull request introduces a new job scraper for "Welcome to the Jungle" and includes several enhancements and refactoring across various files. The most important changes include the addition of the new scraper, updates to the base scraper class, and modifications to the scraper orchestration and testing.
+
+### New Scraper Addition:
+* [`src/job_scrapers/welcome_to_the_jungle.py`](diffhunk://#diff-dc19ee754afa8db50121eb04ed34a9287b7c872332c116bacd113d661596affdR1-R280): Added a new class `WelcomeToTheJungleJobScraper` to scrape job listings from the "Welcome to the Jungle" website. This includes methods to load all offers and extract detailed data from each job offer page.
+
+### Base Scraper Enhancements:
+* [`src/job_scrapers/job_scraper_base.py`](diffhunk://#diff-7f338ed0671888035a42ac05559e67dde300fa1ca4b1cd9b706b64b2a8b50c66R32-R33): Updated the `_init_offer_dict` method to include new fields "Experience Level" and "Salary" in the job offer dictionary.
+
+### Scraper Orchestration:
+* [`src/scraper.py`](diffhunk://#diff-0e4337d858599ae81588070897d6d27bb45de76e0e4dd92ad2ae2e55f575ca0eR9): Integrated the new `WelcomeToTheJungleJobScraper` into the main scraping workflow. Added URLs and instances for scraping data engineer and AI job offers, and updated the merging of scraped data. [[1]](diffhunk://#diff-0e4337d858599ae81588070897d6d27bb45de76e0e4dd92ad2ae2e55f575ca0eR9) [[2]](diffhunk://#diff-0e4337d858599ae81588070897d6d27bb45de76e0e4dd92ad2ae2e55f575ca0eR31) [[3]](diffhunk://#diff-0e4337d858599ae81588070897d6d27bb45de76e0e4dd92ad2ae2e55f575ca0eR57-R76) [[4]](diffhunk://#diff-0e4337d858599ae81588070897d6d27bb45de76e0e4dd92ad2ae2e55f575ca0eR94-L78)
+
+### Debugging and Logging:
+* `src/job_scrapers/airfrance.py` and `src/job_scrapers/apple.py`: Replaced conditional print statements with the `rich` library for better debug output formatting. [[1]](diffhunk://#diff-49f2494f9f1ecc85b6df5db47e3d9b63f0d5d44c5908657e225b3335788c15c6L224-R227) [[2]](diffhunk://#diff-0cf6b1646f0fb50435686901fc8ab3d3c4d329fe4bed0ef6b66a9d1ff3427318L211-R214)
+
+### Unit Testing:
+* [`tests/unit/test_wtj_scraper.py`](diffhunk://#diff-d443dbcfd56c1a71634c169759cf479577397680d64c1af0f0588cd8c2db64b8R1-R70): Added unit tests for the `WelcomeToTheJungleJobScraper` to verify the extraction of total offers and detailed job offers using dummy elements and a mock driver.
+
