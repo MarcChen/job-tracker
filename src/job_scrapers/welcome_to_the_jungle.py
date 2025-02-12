@@ -66,17 +66,26 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
                 except Exception:
                     continue
 
+            try:
+                french_btn = WebDriverWait(self.driver, 5).until(
+                    EC.element_to_be_clickable(
+                        (
+                            By.CSS_SELECTOR,
+                            "button[data-testid='country-banner-stay-button']",
+                        )
+                    )
+                )
+                french_btn.click()
+                time.sleep(random.uniform(1, 2))
+            except Exception:
+                pass
+
             location_input = self.driver.find_element(
                 By.CSS_SELECTOR, "#search-location-field"
             )
             clear_button = WebDriverWait(self.driver, 10).until(
                 EC.element_to_be_clickable(
                     (By.CSS_SELECTOR, "button[data-testid='clear-dropdown-search']")
-                )
-            )
-            WebDriverWait(self.driver, 10).until(
-                EC.invisibility_of_element_located(
-                    (By.CSS_SELECTOR, "div[style*='z-index: 999']")
                 )
             )
             clear_button.click()
