@@ -28,9 +28,7 @@ def scrape_all_offers(driver, include_filters, exclude_filters, debug=False):
         "https://recrutement.airfrance.com/offre-de-emploi/liste-offres.aspx"
     )
     url_apple = "https://jobs.apple.com/fr-fr/search?sort=relevance&location=france-FRAC+singapore-SGP+hong-kong-HKGC+taiwan-TWN"
-    url_wtj = (
-        "https://www.welcometothejungle.com/fr/jobs?&refinementList%5Bcontract_type%5D%5B%5D=full_time&refinementList%5Bcontract_type%5D%5B%5D=temporary&refinementList%5Bcontract_type%5D%5B%5D=freelance",
-    )
+    url_wtj = "https://www.welcometothejungle.com/fr/jobs?&refinementList%5Bcontract_type%5D%5B%5D=full_time&refinementList%5Bcontract_type%5D%5B%5D=temporary&refinementList%5Bcontract_type%5D%5B%5D=freelance"
 
     scraper_vie = VIEJobScraper(
         url_vie,
