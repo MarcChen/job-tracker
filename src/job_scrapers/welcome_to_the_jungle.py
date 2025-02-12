@@ -1,6 +1,7 @@
 from calendar import c
 import random
 import time
+import re
 from typing import Dict, List, Union
 
 from selenium import webdriver
@@ -8,6 +9,7 @@ from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.common.keys import Keys
 
 from src.job_scrapers.job_scraper_base import JobScraperBase
 
@@ -20,6 +22,8 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
         debug: bool = False,
         include_filters: List[str] = [],
         exclude_filters: List[str] = [],
+        keyword: str = "",
+        location: str = "",
     ):
         """
         Initialize the WelcomeToTheJungleJobScraper.
@@ -37,6 +41,8 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
         self.include_filters = include_filters
         self.exclude_filters = exclude_filters
         self.debug = debug
+        self.keyword = keyword
+        self.location = location
 
     def load_all_offers(self) -> None:
         """
@@ -62,6 +68,24 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
                 except Exception:
                     continue
     
+
+            location_input = self.driver.find_element(By.CSS_SELECTOR, "#search-location-field")
+            clear_button = WebDriverWait(self.driver, 10).until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, "button[data-testid='clear-dropdown-search']"))
+            )
+            clear_button.click()
+            location_input.send_keys(self.location)
+            time.sleep(random.uniform(1, 1.5))
+            location_input.send_keys(Keys.ENTER)
+            time.sleep(random.uniform(1, 2))
+
+            # Add filters by entering keyword, location, and selecting job type
+            search_input = self.driver.find_element(By.CSS_SELECTOR, "#search-query-field")
+            search_input.clear()
+            search_input.send_keys(self.keyword)
+            search_input.send_keys(Keys.ENTER)
+            time.sleep(random.uniform(1, 2))
+
             self.total_offers = int(
                 WebDriverWait(self.driver, 10)
                 .until(
@@ -120,7 +144,8 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
                     next_button.click()
                     time.sleep(random.uniform(1, 3))
                 except Exception as e:
-                    raise ValueError(f"Error navigating to next page: {e}")
+                    print("Reached last offer")
+                    break
 
         except Exception as e:
             raise ValueError(f"Error loading offers: {e}")
@@ -148,6 +173,7 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
                 return "N/A"
 
         offers = []
+        self.total_offers = len(self.offers_url)
         for offer_url in self.offers_url:
             self.driver.get(offer_url)
             time.sleep(random.uniform(1, 3))

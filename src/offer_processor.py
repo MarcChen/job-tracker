@@ -102,8 +102,8 @@ class OfferProcessor:
                     f"Contract Type: {offer['Contract Type']}\n"
                     f"URL: {offer['URL']}\n"
                 )
-            self.sms_client.send_sms(sms_message)
-            time.sleep(1)
+            # self.sms_client.send_sms(sms_message)
+            # time.sleep(1)
 
             job_properties = {
                 "Title": {
