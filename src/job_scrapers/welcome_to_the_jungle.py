@@ -74,6 +74,11 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
                     (By.CSS_SELECTOR, "button[data-testid='clear-dropdown-search']")
                 )
             )
+            WebDriverWait(self.driver, 10).until(
+                EC.invisibility_of_element_located(
+                    (By.CSS_SELECTOR, "div[style*='z-index: 999']")
+                )
+            )
             clear_button.click()
             location_input.send_keys(self.location)
             time.sleep(random.uniform(1, 1.5))
