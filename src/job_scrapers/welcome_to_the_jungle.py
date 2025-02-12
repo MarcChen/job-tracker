@@ -1,6 +1,8 @@
 import random
 import time
 from typing import Dict, List, Union
+import os 
+from src.notion_client import NotionClient
 
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
@@ -41,6 +43,11 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
         self.debug = debug
         self.keyword = keyword
         self.location = location
+        DATABASE_ID = os.getenv("DATABASE_ID")
+        NOTION_API = os.getenv("NOTION_API")
+        assert DATABASE_ID, "DATABASE_ID environment variable is not set."
+        assert NOTION_API, "NOTION_API environment variable is not set."
+        self.notion_client = NotionClient(NOTION_API, DATABASE_ID)
 
     def load_all_offers(self) -> None:  # noqa: C901
         """
@@ -152,6 +159,9 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
                             print(
                                 f"Skipping offer '{job_title}' (matches exclude filters)"
                             )
+                            continue
+                        if self.notion_client.title_exists(job_title):
+                            print(f"Skipping offer '{job_title}' (already exists)")
                             continue
                         self.offers_url.append(job_link.get_attribute("href"))
                     except Exception as e:
