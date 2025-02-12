@@ -29,7 +29,7 @@ def scrape_all_offers(driver, include_filters, exclude_filters, debug=False):
     )
     url_apple = "https://jobs.apple.com/fr-fr/search?sort=relevance&location=france-FRAC+singapore-SGP+hong-kong-HKGC+taiwan-TWN"
     url_wtj = (
-        "https://www.welcometothejungle.com/fr/jobs?refinementList[offices.country_code][]=FR&query=data",
+        "https://www.welcometothejungle.com/fr/jobs?&refinementList%5Bcontract_type%5D%5B%5D=full_time&refinementList%5Bcontract_type%5D%5B%5D=temporary&refinementList%5Bcontract_type%5D%5B%5D=freelance",
     )
 
     scraper_vie = VIEJobScraper(
@@ -94,13 +94,13 @@ def scrape_all_offers(driver, include_filters, exclude_filters, debug=False):
         progress.remove_task(task_apple)
 
         task_wtj = progress.add_task(
-            "[yellow]Scraping Welcome to the Jungle offers...", total=None
+            "[yellow]Scraping Welcome to the Jungle Data Engineer offers...", total=None
         )
         data_wtj_data_engineer = scraper_wtj_data_engineer.scrape()
         progress.remove_task(task_wtj)
 
         task_wtj_ai = progress.add_task(
-            "[yellow]Scraping Welcome to the Jungle offers...", total=None
+            "[yellow]Scraping Welcome to the Jungle AI offers...", total=None
         )
         data_wtj_ai = scraper_wtj_data_ai.scrape()
         progress.remove_task(task_wtj_ai)
