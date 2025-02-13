@@ -1,7 +1,6 @@
 import random
 import time
 from typing import Dict, List, Union
-from src.notion_integration import NotionClient
 
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
@@ -11,6 +10,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
 from src.job_scrapers.job_scraper_base import JobScraperBase
+from src.notion_integration import NotionClient
 
 
 class WelcomeToTheJungleJobScraper(JobScraperBase):
@@ -137,8 +137,12 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
                         ).text
                         if self.should_skip_offer(job_title):
                             continue
-                        elif self.notion_client.offer_exists(title=job_title, source="Welcome to the Jungle"):
-                            print(f"Skipping offer '{job_title}' (already exists in Notion database)...")
+                        elif self.notion_client.offer_exists(
+                            title=job_title, source="Welcome to the Jungle"
+                        ):
+                            print(
+                                f"Skipping offer '{job_title}' (already exists in Notion database)..."
+                            )
                             continue
                         self.offers_url.append(job_link.get_attribute("href"))
                     except Exception as e:

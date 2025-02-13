@@ -77,7 +77,7 @@ class OfferProcessor:
         """
         title = offer["Title"]
         source = offer["Source"]
-        company = offer['Company']
+        company = offer["Company"]
 
         if self.notion_client.offer_exists(title=title, source=source, company=company):
             progress.console.log(
@@ -132,7 +132,7 @@ class OfferProcessor:
                             ]
                         }
                     else:
-                        clean_value = offer[field].replace(',', '')
+                        clean_value = offer[field].replace(",", "")
                         job_properties[field] = {"select": {"name": clean_value}}
             self.notion_client.create_page(job_properties)
 

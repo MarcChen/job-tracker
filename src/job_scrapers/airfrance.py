@@ -106,8 +106,12 @@ class AirFranceJobScraper(JobScraperBase):
                     title = title_link.text
                     if self.should_skip_offer(title):
                         continue
-                    elif self.notion_client.offer_exists(title=title, source="Air France"):
-                        print(f"Skipping offer '{title}' (already exists in Notion database)...")
+                    elif self.notion_client.offer_exists(
+                        title=title, source="Air France"
+                    ):
+                        print(
+                            f"Skipping offer '{title}' (already exists in Notion database)..."
+                        )
                         continue
                     self.offers_url.append(title_link.get_attribute("href"))
                 print(f"{len(offers)} offers loaded")

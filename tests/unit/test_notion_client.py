@@ -22,13 +22,21 @@ def test_offer_exists(notion_client):
             "Company": "Fake Company",
             "Location": "Fake Location",
             "Source": "Fake Source",
-            "URL": ""
+            "URL": "",
         }
     ]
     # Duplicate offer; note location is no longer used.
-    assert notion_client.offer_exists("Test Title", "Fake Source", company="Fake Company") is True
+    assert (
+        notion_client.offer_exists("Test Title", "Fake Source", company="Fake Company")
+        is True
+    )
     # Nonexistent offer.
-    assert notion_client.offer_exists("Nonexistent Title", "Fake Source", company="Fake Company") is False
+    assert (
+        notion_client.offer_exists(
+            "Nonexistent Title", "Fake Source", company="Fake Company"
+        )
+        is False
+    )
 
 
 @patch("src.notion_integration.NotionClient.create_page")
@@ -42,7 +50,7 @@ def test_create_page(mock_create, notion_client):
         "Company": {"select": {"name": "Tech Corp"}},
         "Location": {"select": {"name": "Remote"}},  # remains in properties if needed
         "Source": {"select": {"name": "JobBoard"}},
-        "URL": {"url": "http://example.com"}
+        "URL": {"url": "http://example.com"},
     }
     response = notion_client.create_page(properties)
     assert response is not None

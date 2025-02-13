@@ -1,8 +1,8 @@
-from src.scraper import scrape_all_offers, setup_driver
-from src.notion_integration import NotionClient
-from src.offer_processor import OfferProcessor
 import os
 
+from src.notion_integration import NotionClient
+from src.offer_processor import OfferProcessor
+from src.scraper import scrape_all_offers, setup_driver
 
 if __name__ == "__main__":
     INCLUDE_FILTERS = [
@@ -43,8 +43,16 @@ if __name__ == "__main__":
     notion_client = NotionClient(NOTION_API, DATABASE_ID)
     try:
         driver = setup_driver(debug=DEBUG)
-        data = scrape_all_offers(driver, INCLUDE_FILTERS, EXCLUDE_FILTERS, debug=DEBUG, notion_client=notion_client)
-        print(f"Finished loading all available offers. Processing {len(data)} offers...")
+        data = scrape_all_offers(
+            driver,
+            INCLUDE_FILTERS,
+            EXCLUDE_FILTERS,
+            debug=DEBUG,
+            notion_client=notion_client,
+        )
+        print(
+            f"Finished loading all available offers. Processing {len(data)} offers..."
+        )
     finally:
         driver.quit()
     processor = OfferProcessor(data, notion_client=notion_client)

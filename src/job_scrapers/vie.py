@@ -104,8 +104,12 @@ class VIEJobScraper(JobScraperBase):
                 # Apply exclusion filter: Skip if any of the exclude_filters are found.
                 if self.should_skip_offer(title):
                     continue
-                elif self.notion_client.offer_exists(title=title, source="Business France", company=company):
-                    print(f"Skipping offer '{title}' (already exists in Notion database)...")
+                elif self.notion_client.offer_exists(
+                    title=title, source="Business France", company=company
+                ):
+                    print(
+                        f"Skipping offer '{title}' (already exists in Notion database)..."
+                    )
                     continue
                 details = offer.find_elements(By.TAG_NAME, "li")
 

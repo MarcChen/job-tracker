@@ -1,4 +1,5 @@
 from typing import Dict, List, Optional
+
 from notion_client import Client
 
 
@@ -15,7 +16,9 @@ class NotionClient:
         self.client = Client(auth=notion_api_key)
         self.all_offers = self.get_all_offers()
 
-    def offer_exists(self, title: str, source: str, company: Optional[str] = None) -> bool:
+    def offer_exists(
+        self, title: str, source: str, company: Optional[str] = None
+    ) -> bool:
         """
         Checks if an offer with the given properties already exists in the loaded offers.
 
@@ -30,9 +33,9 @@ class NotionClient:
         """
         for offer in self.all_offers:
             if (
-                offer.get("Title", "").lower() == title.lower() and
-                offer.get("Source", "").lower() == source.lower() and
-                (not company or offer.get("Company", "").lower() == company.lower())
+                offer.get("Title", "").lower() == title.lower()
+                and offer.get("Source", "").lower() == source.lower()
+                and (not company or offer.get("Company", "").lower() == company.lower())
             ):
                 return True
         return False
@@ -163,7 +166,7 @@ class NotionClient:
             key = (
                 self._extract_title(properties).strip().lower(),
                 self._extract_select(properties, "Source").strip().lower(),
-                self._extract_select(properties, "Company").strip().lower()
+                self._extract_select(properties, "Company").strip().lower(),
             )
             if key in seen_offers:
                 duplicates.append(page)
@@ -182,6 +185,7 @@ class NotionClient:
 if __name__ == "__main__":
     # Cleaning up duplicate offers in the Notion database
     import os
+
     DATABASE_ID = os.getenv("DATABASE_ID")
     NOTION_API = os.getenv("NOTION_API")
     assert DATABASE_ID, "DATABASE_ID environment variable is not set."

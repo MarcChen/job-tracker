@@ -110,8 +110,12 @@ class AppleJobScraper(JobScraperBase):
                             job_title = title_link.text
                             if self.should_skip_offer(job_title):
                                 continue
-                            elif self.notion_client.offer_exists(title=job_title, source="Apple", company="Apple"):
-                                print(f"Skipping offer '{job_title}' (already exists in Notion database)...")
+                            elif self.notion_client.offer_exists(
+                                title=job_title, source="Apple", company="Apple"
+                            ):
+                                print(
+                                    f"Skipping offer '{job_title}' (already exists in Notion database)..."
+                                )
                                 continue
                             else:
                                 self.offers_url.append(title_link.get_attribute("href"))

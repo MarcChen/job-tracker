@@ -10,7 +10,9 @@ from src.job_scrapers.welcome_to_the_jungle import WelcomeToTheJungleJobScraper
 from src.notion_integration import NotionClient
 
 
-def scrape_all_offers(driver, include_filters, exclude_filters, notion_client: NotionClient, debug=False):
+def scrape_all_offers(
+    driver, include_filters, exclude_filters, notion_client: NotionClient, debug=False
+):
     """
     Scrapes job offers from three different job portals: VIE, Air France, and Apple.
     This function creates a scraper for each source website using the appropriate scraper class, initiates the scraping process while displaying a progress spinner, and then aggregates the results.
@@ -77,7 +79,7 @@ def scrape_all_offers(driver, include_filters, exclude_filters, notion_client: N
         keyword="artificial intelligence",
         location="Île-de-France",
         debug=debug,
-        notion_client=notion_client
+        notion_client=notion_client,
     )
 
     with Progress(
@@ -109,11 +111,11 @@ def scrape_all_offers(driver, include_filters, exclude_filters, notion_client: N
         data_wtj_ai = scraper_wtj_data_ai.scrape()
         progress.remove_task(task_wtj_ai)
         offers = (
-            data_VIE +
-            data_Air_France +
-            data_apple +
-            data_wtj_data_engineer +
-            data_wtj_ai
+            data_VIE
+            + data_Air_France
+            + data_apple
+            + data_wtj_data_engineer
+            + data_wtj_ai
         )
         print(f"Combined scrapped offers : {offers}") if debug else None
         return offers
