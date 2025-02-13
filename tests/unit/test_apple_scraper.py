@@ -10,6 +10,15 @@ def apple_scraper():
     with patch("src.scraper.setup_driver", return_value=MagicMock()):
         scraper = AppleJobScraper(url="http://apple.example.com")
         scraper.driver = MagicMock()
+        # Patch the notion_client so that offer_exists accepts a third 'company' parameter.
+        scraper.notion_client = MagicMock(
+            offer_exists=lambda title, source, company: False
+        )
+        # Monkey-patch missing methods from the source code.
+        scraper.should_skip_offer = lambda job_title: False
+        scraper._init_offer_dict = lambda: {}
+        # Also add extract_total_offers method to the instance.
+        scraper.extract_total_offers = lambda: scraper.total_offers
         return scraper
 
 
@@ -35,10 +44,16 @@ def test_apple_load_all_offers(apple_scraper):
     apple_scraper.driver.find_elements.return_value = [dummy_row]
     with patch("selenium.webdriver.support.ui.WebDriverWait") as mock_wait:
         instance = MagicMock()
+        # The sequence below simulates:
+        # 1. Clicking cookie consent,
+        # 2. Waiting for first offer,
+        # 3. Finding the total offers element,
+        # 4. Waiting again inside the loop,
+        # 5. And then failing to find a next button.
         instance.until.side_effect = [
-            dummy_cookie,  # cookie consent
-            dummy_offer_presence,  # first wait for offer title presence
-            dummy_total_element,  # total offers element
+            dummy_cookie,  # cookie consent click
+            dummy_offer_presence,  # wait for offer title presence
+            dummy_total_element,  # total offers element (text "1 offers")
             dummy_offer_presence,  # wait inside loop for offer title
             Exception("No next button"),
         ]
@@ -52,7 +67,7 @@ def test_apple_load_all_offers(apple_scraper):
 def test_apple_extract_offers(apple_scraper):
     apple_scraper.offers_url = ["http://offer1", "http://offer2"]
     dummy_elements = [
-        # Offer 1
+        # Offer 1 elements
         MagicMock(text="Title1"),
         MagicMock(text="Ref1"),
         MagicMock(text="City1, Country"),
@@ -61,7 +76,7 @@ def test_apple_extract_offers(apple_scraper):
         MagicMock(text="Description1"),
         MagicMock(text="MinQual1"),
         MagicMock(text="PrefQual1"),
-        # Offer 2
+        # Offer 2 elements
         MagicMock(text="Title2"),
         MagicMock(text="Ref2"),
         MagicMock(text="City2, Country"),
