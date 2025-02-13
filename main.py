@@ -1,18 +1,23 @@
-from src.offer_processor import OfferProcessor
 from src.scraper import scrape_all_offers, setup_driver
+from src.notion_integration import NotionClient
+from src.offer_processor import OfferProcessor
+import os
+
 
 if __name__ == "__main__":
     INCLUDE_FILTERS = [
-        "data",
+        "data engineer",
+        "data scientist",
         "machine learning",
         "artificial intelligence",
         "big data",
         "science",
+        "GCP",
+        "Data platform",
+        "Cloud Database",
         "deep learning",
-        "deep",
         "software",
         "developer",
-        "learning",
         "neural networks",
         "computer vision",
         "vision",
@@ -31,12 +36,16 @@ if __name__ == "__main__":
     ]
     DEBUG = False
 
+    DATABASE_ID = os.getenv("DATABASE_ID")
+    NOTION_API = os.getenv("NOTION_API")
+    assert DATABASE_ID, "DATABASE_ID environment variable is not set."
+    assert NOTION_API, "NOTION_API environment variable is not set."
+    notion_client = NotionClient(NOTION_API, DATABASE_ID)
     try:
         driver = setup_driver(debug=DEBUG)
-        data = scrape_all_offers(driver, INCLUDE_FILTERS, EXCLUDE_FILTERS, debug=DEBUG)
+        data = scrape_all_offers(driver, INCLUDE_FILTERS, EXCLUDE_FILTERS, debug=DEBUG, notion_client=notion_client)
+        print(f"Finished loading all available offers. Processing {len(data)} offers...")
     finally:
         driver.quit()
-    print(f"Total offers found: {data['total_offers']}")
-
-    processor = OfferProcessor(data)
+    processor = OfferProcessor(data, notion_client=notion_client)
     processor.process_offers()

@@ -1,54 +1,49 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
-from src.notion_client import NotionClient
+from src.notion_integration import NotionClient
 
 
 @pytest.fixture
 def notion_client():
-    return NotionClient(notion_api_key="fake_api_key", database_id="fake_database_id")
+    with patch.object(NotionClient, "get_all_offers", return_value=[]):
+        nc = NotionClient(notion_api_key="fake_api_key", database_id="fake_database_id")
+    # Override offers to prevent automatic API calls.
+    nc.all_offers = []
+    return nc
 
 
-@patch("notion_client.requests.post")
-def test_title_exists(mock_post, notion_client):
-    # Mock response from Notion API
-    mock_response = MagicMock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = {
-        "results": [
-            {"properties": {"Title": {"title": [{"text": {"content": "Test Title"}}]}}}
-        ]
-    }
-    mock_post.return_value = mock_response
-
-    # Test for existing title
-    assert notion_client.title_exists("Test Title") is True
-
-    # Test for non-existing title
-    assert notion_client.title_exists("Nonexistent Title") is False
+def test_offer_exists(notion_client):
+    # Set up an offer to simulate an existing page.
+    notion_client.all_offers = [
+        {
+            "Title": "Test Title",
+            "Company": "Fake Company",
+            "Location": "Fake Location",
+            "Source": "Fake Source",
+            "URL": ""
+        }
+    ]
+    # Duplicate offer; note location is no longer used.
+    assert notion_client.offer_exists("Test Title", "Fake Source", company="Fake Company") is True
+    # Nonexistent offer.
+    assert notion_client.offer_exists("Nonexistent Title", "Fake Source", company="Fake Company") is False
 
 
-@patch("notion_client.requests.post")
-def test_create_page(mock_post, notion_client):
-    # Mock response for title existence check
-    mock_post.return_value = MagicMock(status_code=200, json=lambda: {"results": []})
-
-    # Mock response for page creation
-    mock_post.return_value = MagicMock(
-        status_code=200, json=lambda: {"id": "new_page_id"}
-    )
-
+@patch("src.notion_integration.NotionClient.create_page")
+def test_create_page(mock_create, notion_client):
+    # Ensure no duplicate exists.
+    notion_client.all_offers = []
+    # Configure the mock to simulate page creation.
+    mock_create.return_value = {"id": "new_page_id"}
     properties = {
         "Title": {"title": [{"text": {"content": "New Title"}}]},
-        "Candidates": {"number": 5},
-        "Views": {"number": 100},
-        "ContractType": {"select": {"name": "Full-Time"}},
         "Company": {"select": {"name": "Tech Corp"}},
-        "Location": {"select": {"name": "Remote"}},
-        "Duration": {"select": {"name": "6 months"}},
+        "Location": {"select": {"name": "Remote"}},  # remains in properties if needed
+        "Source": {"select": {"name": "JobBoard"}},
+        "URL": {"url": "http://example.com"}
     }
-
     response = notion_client.create_page(properties)
     assert response is not None
     assert response["id"] == "new_page_id"

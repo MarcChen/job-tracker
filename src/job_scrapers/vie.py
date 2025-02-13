@@ -9,6 +9,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
 from src.job_scrapers.job_scraper_base import JobScraperBase
+from src.notion_integration import NotionClient
 
 
 class VIEJobScraper(JobScraperBase):
@@ -19,11 +20,13 @@ class VIEJobScraper(JobScraperBase):
         debug: bool = False,
         include_filters: List[str] = None,
         exclude_filters: List[str] = None,
+        notion_client: NotionClient = None,
     ):
         super().__init__(url, driver=driver)
         self.include_filters = include_filters
         self.exclude_filters = exclude_filters
         self.debug = debug
+        self.notion_client = notion_client
 
     def load_all_offers(self) -> None:
         """
@@ -87,6 +90,7 @@ class VIEJobScraper(JobScraperBase):
             try:
                 time.sleep(random.uniform(0.1, 0.3))  # Randomized delay per offer
                 title = offer.find_element(By.TAG_NAME, "h2").text
+                company = offer.find_element(By.CLASS_NAME, "organization").text
 
                 # Apply inclusion filter: Skip if none of the include_filters are found.
                 if self.include_filters and not any(
@@ -98,19 +102,17 @@ class VIEJobScraper(JobScraperBase):
                     continue
 
                 # Apply exclusion filter: Skip if any of the exclude_filters are found.
-                if self.exclude_filters and any(
-                    keyword.lower() in title.lower() for keyword in self.exclude_filters
-                ):
-                    print(f"Skipping offer '{title}' (matches exclude filters)...")
+                if self.should_skip_offer(title):
+                    continue
+                elif self.notion_client.offer_exists(title=title, source="Business France", company=company):
+                    print(f"Skipping offer '{title}' (already exists in Notion database)...")
                     continue
                 details = offer.find_elements(By.TAG_NAME, "li")
 
                 offer_data.update(
                     {
                         "Title": title,
-                        "Company": offer.find_element(
-                            By.CLASS_NAME, "organization"
-                        ).text,
+                        "Company": company,
                         "Location": offer.find_element(By.CLASS_NAME, "location").text,
                         "Contract Type": (
                             details[0].text if len(details) > 0 else "N/A"
@@ -130,22 +132,3 @@ class VIEJobScraper(JobScraperBase):
             except Exception as e:
                 warnings.warn(f"Error extracting data for an offer: {e}")
         return offers
-
-    def extract_total_offers(self) -> Union[str, int]:
-        """
-        Extract the total offers count displayed on the page.
-
-        Returns:
-            Union[str, int]: The total offers count as an integer, or 'Unknown' if an error occurs.
-        """
-        try:
-            time.sleep(
-                random.uniform(1, 3)
-            )  # Randomized delay before accessing total offers count
-            total_offers = int(
-                self.driver.find_element(By.CLASS_NAME, "count").text.split()[0]
-            )
-            return total_offers
-        except Exception as e:
-            print(f"Error retrieving total offers count: {e}")
-            return "Unknown"

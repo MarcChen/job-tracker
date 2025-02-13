@@ -4,7 +4,7 @@ from typing import Any, Dict
 
 from rich.progress import Progress
 
-from src.notion_client import NotionClient
+from src.notion_integration import NotionClient
 from src.sms_alert import SMSAPI
 
 
@@ -19,7 +19,7 @@ class OfferProcessor:
         offers (List[dict]): List containing job offer dictionaries.
     """
 
-    def __init__(self, data: Dict[str, Any]):
+    def __init__(self, data: Dict[str, Any], notion_client: NotionClient):
         DATABASE_ID = os.getenv("DATABASE_ID")
         NOTION_API = os.getenv("NOTION_API")
         FREE_MOBILE_USER_ID = os.getenv("FREE_MOBILE_USER_ID")
@@ -32,10 +32,10 @@ class OfferProcessor:
         assert (
             FREE_MOBILE_API_KEY
         ), "FREE_MOBILE_API_KEY environment variable is not set."
-        self.notion_client = NotionClient(NOTION_API, DATABASE_ID)
+        self.notion_client = notion_client
         self.sms_client = SMSAPI(FREE_MOBILE_USER_ID, FREE_MOBILE_API_KEY)
-        self.total_offers = data.get("total_offers", 0)
-        self.offers = data.get("offers", [])
+        self.total_offers = len(data)
+        self.offers = data
 
     def process_offer(self, offer, progress, task):
         """
@@ -62,7 +62,7 @@ class OfferProcessor:
             task: The current task identifier used by the progress tracker.
 
         Behavior:
-            - Checks if a job with the same title already exists using notion_client.title_exists.
+            - Checks if a job with the same title already exists using notion_client.offer_exists.
               If it does, logs a skipping message and advances the progress.
             - If the offer is new:
                  - Constructs an SMS message:
@@ -76,8 +76,10 @@ class OfferProcessor:
                  - Creates a new Notion page with the constructed properties using notion_client.create_page.
         """
         title = offer["Title"]
+        source = offer["Source"]
+        company = offer['Company']
 
-        if self.notion_client.title_exists(title):
+        if self.notion_client.offer_exists(title=title, source=source, company=company):
             progress.console.log(
                 f"[yellow]Job '{title}' already exists. Skipping...[/yellow]"
             )
@@ -87,7 +89,7 @@ class OfferProcessor:
                 sms_message = (
                     f"New VIE Job Alert!\n"
                     f"Title: {offer['Title']}\n"
-                    f"Company: {offer['Company']}\n"
+                    f"Company: {company}\n"
                     f"Location: {offer['Location']}\n"
                     f"Duration: {offer['Duration']}\n"
                 )
@@ -95,14 +97,14 @@ class OfferProcessor:
                 sms_message = (
                     f"CDI Job Alert!\n"
                     f"Title: {offer['Title']}\n"
-                    f"Company: {offer['Company']}\n"
-                    f"Source: {offer['Source']}\n"
+                    f"Company: {company}\n"
+                    f"Source: {source}\n"
                     f"Location: {offer['Location']}\n"
                     f"Contract Type: {offer['Contract Type']}\n"
                     f"URL: {offer['URL']}\n"
                 )
             self.sms_client.send_sms(sms_message)
-            time.sleep(1)
+            time.sleep(3)
 
             job_properties = {
                 "Title": {
