@@ -10,6 +10,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
 from src.job_scrapers.job_scraper_base import JobScraperBase
+from src.notion_integration import NotionClient
 
 
 class AirFranceJobScraper(JobScraperBase):
@@ -22,6 +23,7 @@ class AirFranceJobScraper(JobScraperBase):
         debug: bool = False,
         include_filters: List[str] = [],
         exclude_filters: List[str] = [],
+        notion_client: NotionClient = None,
     ):
         """
         Initialize the AirFranceJobScraper class.
@@ -39,6 +41,7 @@ class AirFranceJobScraper(JobScraperBase):
         self.include_filters = include_filters
         self.exclude_filters = exclude_filters
         self.debug = debug
+        self.notion_client = notion_client
 
     def load_all_offers(self) -> None:  # noqa: C901
         try:
@@ -101,14 +104,14 @@ class AirFranceJobScraper(JobScraperBase):
                         By.CLASS_NAME, "ts-offer-list-item__title-link"
                     )
                     title = title_link.text
-                    if not any(
-                        keyword.lower() in title.lower()
-                        for keyword in self.include_filters
-                    ) or any(
-                        keyword.lower() in title.lower()
-                        for keyword in self.exclude_filters
+                    if self.should_skip_offer(title):
+                        continue
+                    elif self.notion_client.offer_exists(
+                        title=title, source="Air France"
                     ):
-                        print(f"Skipping offer '{title}' ...")
+                        print(
+                            f"Skipping offer '{title}' (already exists in Notion database)..."
+                        )
                         continue
                     self.offers_url.append(title_link.get_attribute("href"))
                 print(f"{len(offers)} offers loaded")
@@ -228,12 +231,3 @@ class AirFranceJobScraper(JobScraperBase):
             except Exception as e:
                 raise ValueError(f"Error extracting data for an offer: {e}")
         return offers
-
-    def extract_total_offers(self) -> Union[str, int]:
-        """
-        Extract the total offers count displayed on the page.
-
-        Returns:
-            Union[str, int]: The total offers count as an integer, or 'Unknown' if an error occurs.
-        """
-        return self.total_offers

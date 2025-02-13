@@ -21,6 +21,8 @@ class JobScraperBase:
         """
         self.url = url
         self.driver = driver
+        self.include_filters = include_filters
+        self.exclude_filters = exclude_filters
 
     def _init_offer_dict(self) -> Dict[str, Union[str, int]]:
         """Initialize a standardized offer dictionary with default values."""
@@ -52,6 +54,22 @@ class JobScraperBase:
             return False
         return True
 
+    def should_skip_offer(self, job_title: str) -> bool:
+        """
+        Determine if an offer should be skipped based on include/exclude filters.
+        """
+        if self.include_filters and not any(
+            keyword.lower() in job_title.lower() for keyword in self.include_filters
+        ):
+            print(f"Skipping offer '{job_title}' ...")
+            return True
+        if self.exclude_filters and any(
+            keyword.lower() in job_title.lower() for keyword in self.exclude_filters
+        ):
+            print(f"Skipping offer '{job_title}' ...")
+            return True
+        return False
+
     def load_all_offers(self) -> None:
         """
         Load all offers by repeatedly clicking 'Voir Plus d'Offres' with added randomness.
@@ -67,28 +85,17 @@ class JobScraperBase:
         """
         raise NotImplementedError("This method should be implemented by subclasses")
 
-    def extract_total_offers(self) -> Union[str, int]:
+    def scrape(self) -> List[Dict[str, Union[str, int]]]:
         """
-        Extract the total offers count displayed on the page.
+        Perform the scraping process.
+
+        This method loads all offers, extracts the raw offers data, validates each offer,
+        and returns a list of validated job offers.
 
         Returns:
-            Union[str, int]: The total offers count as an integer, or 'Unknown' if an error occurs.
-        """
-        raise NotImplementedError("This method should be implemented by subclasses")
-
-    def scrape(
-        self,
-    ) -> Dict[str, Union[str, List[Dict[str, Union[str, int]]]]]:
-        """
-        Main method to perform the scraping.
-
-        Returns:
-            Dict[str, Union[str, List[Dict[str, Union[str, int]]]]]: A dictionary containing the total offers count and offers data.
+            List[Dict[str, Union[str, int]]]: A list of dictionaries, each representing a validated job offer.
         """
         self.load_all_offers()
         raw_offers = self.extract_offers()
         validated_offers = [offer for offer in raw_offers if self.validate_offer(offer)]
-        return {
-            "total_offers": self.extract_total_offers(),
-            "offers": validated_offers,
-        }
+        return validated_offers

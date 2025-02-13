@@ -10,6 +10,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
 from src.job_scrapers.job_scraper_base import JobScraperBase
+from src.notion_integration import NotionClient
 
 
 class WelcomeToTheJungleJobScraper(JobScraperBase):
@@ -22,6 +23,7 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
         exclude_filters: List[str] = [],
         keyword: str = "",
         location: str = "",
+        notion_client: NotionClient = None,
     ):
         """
         Initialize the WelcomeToTheJungleJobScraper.
@@ -41,6 +43,7 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
         self.debug = debug
         self.keyword = keyword
         self.location = location
+        self.notion_client = notion_client
 
     def load_all_offers(self) -> None:  # noqa: C901
         """
@@ -132,25 +135,13 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
                         job_title = row.find_element(
                             By.CSS_SELECTOR, "a h4 div[role='mark']"
                         ).text
-                        contrat_type = row.find_element(
-                            By.CSS_SELECTOR,
-                            "div[variant='default'][w='fit-content'].sc-eXsaLi.jsMyjk span",
-                        ).text
-                        if self.include_filters and not any(
-                            keyword.lower() in job_title.lower()
-                            for keyword in self.include_filters
-                        ):
-                            print(
-                                f"Skipping offer '{job_title}' (does not match include filters)"
-                            )
+                        if self.should_skip_offer(job_title):
                             continue
-                        if self.exclude_filters and any(
-                            keyword.lower() in job_title.lower()
-                            or keyword.lower() in contrat_type.lower()
-                            for keyword in self.exclude_filters
+                        elif self.notion_client.offer_exists(
+                            title=job_title, source="Welcome to the Jungle"
                         ):
                             print(
-                                f"Skipping offer '{job_title}' (matches exclude filters)"
+                                f"Skipping offer '{job_title}' (already exists in Notion database)..."
                             )
                             continue
                         self.offers_url.append(job_link.get_attribute("href"))
@@ -286,9 +277,3 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
                 raise ValueError(f"Error extracting data for an offer: {e}")
 
         return offers
-
-    def extract_total_offers(self) -> int:
-        """
-        Returns the total number of offers loaded.
-        """
-        return self.total_offers

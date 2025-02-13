@@ -8,7 +8,12 @@ restart:
 	@bash scripts/restart_chromium.sh
 
 build-image:
-	@docker build -t job-scraper-image .
+	@docker build -t scraper:test .
 
-launch-image:
-	@docker run -d --name job-scraper-container job-scraper-image
+run-image:
+	@docker run -e NOTION_API=$NOTION_API -e DATABASE_ID=$DATABASE_ID -e FREE_MOBILE_USER_ID=$FREE_MOBILE_USER_ID -e FREE_MOBILE_API_KEY=$FREE_MOBILE_API_KEY --name job-scraper-container scraper:test 
+
+stop-remove:
+	@docker stop job-scraper-container && docker rm job-scraper-container
+
+# docker rm $(docker ps -a -q)
