@@ -224,3 +224,32 @@ Enhancements to web element interaction:
 * Added a step to click the French button if it appears, ensuring the page is in the correct language.
 * Removed the wait for the invisibility of an element with high z-index, streamlining the process of clearing the location input field.
 
+## [1.7.0] - 2025-02-13
+- Merged PR #16 by @MarcChen: Feature : enhance workflow
+# Overview
+
+This PR addresses performance issues and duplicate detection in our Notion integration for job offers. Previously, we queried Notion for each offer by title, which led to two major problems:
+
+- **Duplicate Offers**: Offers with the same title were not being correctly identified as duplicates.
+- **API Limitations**: Notion’s query returns are capped at 100 pages, causing some existing offers to be missed.
+
+## Key Changes
+
+### 1. Enhanced Duplicate Checking
+- **Problem**: Relying solely on the title allowed duplicate entries when different offers shared the same title.
+- **Solution**: We now use a composite key (multiple attributes) to ensure each offer is uniquely identified.
+
+### 2. Performance Optimization
+- **Problem**: Multiple queries to Notion’s API were both slow and incomplete due to the 100-page limit.
+- **Solution**: Refactored to use a dedicated PyPI package that loads all stored pages from Notion into memory. This allows us to perform a single query at initialization and only append offers that are truly new, significantly speeding up the scraping process.
+
+### 3. Additional Improvements
+- **Filter Handling**: Added a centralized `should_skip_offer` method in the job scraper base class to streamline include/exclude filter logic.
+- **Docker Setup**: Updated the `Makefile` to use a test image (`scraper:test`) and added commands for stopping and removing the Docker container.
+- **Dependency Management**: Added the `notion-client` dependency in `pyproject.toml` to support the new Notion integration.
+- **Code Cleanup**: Removed redundant methods and streamlined the scraping process across various job scrapers.
+
+---
+
+This refactor not only resolves the issues with duplicate detection and inefficient querying but also improves the overall maintainability and speed of the job scraping process.
+
