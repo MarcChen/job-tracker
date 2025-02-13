@@ -132,7 +132,8 @@ class OfferProcessor:
                             ]
                         }
                     else:
-                        job_properties[field] = {"select": {"name": offer[field]}}
+                        clean_value = offer[field].replace(',', '')
+                        job_properties[field] = {"select": {"name": clean_value}}
             self.notion_client.create_page(job_properties)
 
     def process_offers(self):
