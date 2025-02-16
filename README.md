@@ -2,6 +2,9 @@
 
 A project in construction for tracking job offers and various activities, leveraging web scraping and integration with Notion for seamless data management.
 
+<p align="center">
+  <img src="./demo.gif" alt="Project Demo GIF" width="600">
+</p>
 
 ## Overview
 
