@@ -129,12 +129,26 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
                 for row in offer_rows:
                     try:
                         loaded_offers += 1
-                        job_link = row.find_element(
-                            By.CSS_SELECTOR, "a[mode='grid'].sc-dnvZjJ.dhlcJw"
-                        )
-                        job_title = row.find_element(
-                            By.CSS_SELECTOR, "a h4 div[role='mark']"
-                        ).text
+                        try:
+                            job_link = row.find_element(
+                                By.CSS_SELECTOR, "a[mode='grid']"
+                            )
+                        except NoSuchElementException:
+                            print(
+                                f"Error: Could not find job link in row {loaded_offers}."
+                            )
+                            continue
+
+                        try:
+                            job_title = row.find_element(
+                                By.CSS_SELECTOR, "a h4 div[role='mark']"
+                            ).text
+                        except NoSuchElementException:
+                            print(
+                                f"Error: Could not find job title in row {loaded_offers}."
+                            )
+                            continue
+
                         if self.should_skip_offer(job_title):
                             continue
                         elif self.notion_client.offer_exists(
@@ -154,20 +168,27 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
                     break
 
                 try:
-                    # Locate the pagination container and its last <li> element (which contains the "next" button)
-                    pagination = self.driver.find_element(
-                        By.CSS_SELECTOR, "ul.sc-mkoLC.cDMQpP"
+                    # Find pagination nav by its aria-label attribute (more robust than class names)
+                    pagination_nav = self.driver.find_element(
+                        By.CSS_SELECTOR, "nav[aria-label='Pagination']"
                     )
-                    next_button_li = pagination.find_elements(By.TAG_NAME, "li")[-1]
-                    # Scroll the last <li> into view
+                    # Find the last li element in the pagination list (which contains the "next" button)
+                    pagination_items = pagination_nav.find_elements(By.TAG_NAME, "li")
+                    next_button_li = pagination_items[-1]
+
+                    # Scroll the next button into view
                     self.driver.execute_script(
                         "arguments[0].scrollIntoView({block: 'center', inline: 'center'});",
                         next_button_li,
                     )
-                    # Wait for the "next" button to be clickable and click it
+
+                    # Wait for the next button (which contains the right arrow SVG) to be clickable
                     next_button = WebDriverWait(self.driver, 10).until(
                         EC.element_to_be_clickable(
-                            (By.CSS_SELECTOR, "ul.sc-mkoLC.cDMQpP li:last-child a")
+                            (
+                                By.CSS_SELECTOR,
+                                "nav[aria-label='Pagination'] li:last-child a",
+                            )
                         )
                     )
                     time.sleep(random.uniform(1, 2))
@@ -232,20 +253,28 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
                 offer_data.update(
                     {
                         "Title": extract_element(
-                            By.CSS_SELECTOR, "h2.sc-fThUAz.fZjqKw.wui-text"
+                            By.CSS_SELECTOR, "h2.sc-lizKOf, h2[class*='wui-text']"
+                        )
+                        or extract_element(
+                            By.XPATH,
+                            "//div[contains(@data-testid, 'job-metadata-block')]//h2",
                         ),
                         "Location": extract_element(
-                            By.CSS_SELECTOR, "div.sc-eXsaLi.kvWjSS span.sc-mkoLC.cfCdii"
+                            By.XPATH, "//i[@name='location']/following-sibling::*//span"
+                        )
+                        or extract_element(
+                            By.CSS_SELECTOR,
+                            "div[class*='kbdlSk'][variant='default'] i[name='location'] + span span",
                         ),
                         "Salary": extract_element(
-                            By.CSS_SELECTOR,
-                            "div.sc-eXsaLi.kvWjSS",
+                            By.XPATH,
+                            "//i[@name='salary']/parent::div",
                             split_text="Salaire :",
                             index=1,
                         ),
                         "Experience Level": extract_element(
                             By.XPATH,
-                            "//div[@variant='default' and @w='fit-content' and contains(@class, 'sc-eXsaLi') and contains(@class, 'kvWjSS') and .//i[@name='suitcase']]",
+                            "//i[@name='suitcase']/parent::div",
                             split_text="Expérience :",
                             index=1,
                         ),
@@ -258,12 +287,15 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
                         "Description": combined_desc,
                         "URL": offer_url,
                         "Contract Type": extract_element(
-                            By.CSS_SELECTOR,
-                            "div[variant='default'][w='fit-content'].sc-eXsaLi.kvWjSS",
+                            By.XPATH, "//i[@name='contract']/parent::div"
                         ),
                         "Company": extract_element(
+                            By.XPATH,
+                            "//div[contains(@data-testid, 'job-metadata-block')]//a[contains(@href, '/companies/')]//span[contains(@class, 'wui-text')]",
+                        )
+                        or extract_element(
                             By.CSS_SELECTOR,
-                            "div.sc-bXCLTC.dPVkkc a.sc-fremEr.gbSfGo span",
+                            "a[href*='/companies/'] span[class*='wui-text']",
                         ),
                         "Source": "Welcome to the Jungle",
                     }
