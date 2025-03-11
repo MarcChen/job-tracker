@@ -253,3 +253,16 @@ This PR addresses performance issues and duplicate detection in our Notion integ
 
 This refactor not only resolves the issues with duplicate detection and inefficient querying but also improves the overall maintainability and speed of the job scraping process.
 
+## [1.7.1] - 2025-03-11
+- Merged PR #17 by @MarcChen: fix : Welcome to the Jungle Issue
+This pull request includes several improvements and bug fixes to the `load_all_offers` and `extract_element` functions in the `src/job_scrapers/welcome_to_the_jungle.py` file. The changes aim to enhance error handling and make the code more robust by using more reliable selectors.
+
+Error handling improvements:
+
+* Added `try-except` blocks to handle `NoSuchElementException` for finding job links and job titles in the `load_all_offers` method. This ensures that the script continues running even if some elements are not found.
+
+Robustness improvements:
+
+* Changed the selector for the pagination navigation element to use the `aria-label` attribute instead of class names, making it more robust to changes in the HTML structure.
+* Updated the `extract_element` function to use more specific and reliable XPath selectors for extracting job metadata such as title, location, salary, experience level, contract type, and company. This improves the accuracy of data extraction. [[1]](diffhunk://#diff-dc19ee754afa8db50121eb04ed34a9287b7c872332c116bacd113d661596affdL235-R277) [[2]](diffhunk://#diff-dc19ee754afa8db50121eb04ed34a9287b7c872332c116bacd113d661596affdL261-R298)
+
