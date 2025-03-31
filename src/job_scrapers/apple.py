@@ -56,7 +56,6 @@ class AppleJobScraper(JobScraperBase):
             except Exception:
                 pass
 
-            # Extract the total-offers number (e.g. "200 résultat(s)")
             try:
                 total_offers_text = (
                     WebDriverWait(self.driver, 15)
@@ -133,12 +132,6 @@ class AppleJobScraper(JobScraperBase):
                     )
                     time.sleep(random.uniform(1, 2))
 
-                    # The "next page" button no longer uses "li.pagination__next a[...]"
-                    # In your pasted HTML, the next button is:
-                    #   <button class="icon icon-chevronend" type="button" ...>
-                    #   or:
-                    #   <button aria-label="Page suivante" class="icon icon-chevronend" ...>
-                    # So we wait for that instead:
                     next_button = WebDriverWait(self.driver, 10).until(
                         EC.element_to_be_clickable(
                             (
