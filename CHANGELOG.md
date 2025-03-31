@@ -266,3 +266,22 @@ Robustness improvements:
 * Changed the selector for the pagination navigation element to use the `aria-label` attribute instead of class names, making it more robust to changes in the HTML structure.
 * Updated the `extract_element` function to use more specific and reliable XPath selectors for extracting job metadata such as title, location, salary, experience level, contract type, and company. This improves the accuracy of data extraction. [[1]](diffhunk://#diff-dc19ee754afa8db50121eb04ed34a9287b7c872332c116bacd113d661596affdL235-R277) [[2]](diffhunk://#diff-dc19ee754afa8db50121eb04ed34a9287b7c872332c116bacd113d661596affdL261-R298)
 
+## [1.7.2] - 2025-03-31
+- Merged PR #18 by @MarcChen: Fix/apple
+This pull request includes several updates to the job scrapers for Apple and Welcome to the Jungle, as well as adjustments to the offer processing and unit tests. The most important changes focus on improving the reliability of the scrapers and enhancing the test coverage.
+
+### Improvements to job scrapers:
+
+* [`src/job_scrapers/apple.py`](diffhunk://#diff-0cf6b1646f0fb50435686901fc8ab3d3c4d329fe4bed0ef6b66a9d1ff3427318R2-R7): Added handling for `TimeoutException` and updated the method for extracting the total number of offers using regex. Adjusted the selectors to match the updated website structure and improved the logic for navigating through job offers. [[1]](diffhunk://#diff-0cf6b1646f0fb50435686901fc8ab3d3c4d329fe4bed0ef6b66a9d1ff3427318R2-R7) [[2]](diffhunk://#diff-0cf6b1646f0fb50435686901fc8ab3d3c4d329fe4bed0ef6b66a9d1ff3427318L45-R50) [[3]](diffhunk://#diff-0cf6b1646f0fb50435686901fc8ab3d3c4d329fe4bed0ef6b66a9d1ff3427318L65-R158) [[4]](diffhunk://#diff-0cf6b1646f0fb50435686901fc8ab3d3c4d329fe4bed0ef6b66a9d1ff3427318L187-R220)
+* [`src/job_scrapers/welcome_to_the_jungle.py`](diffhunk://#diff-dc19ee754afa8db50121eb04ed34a9287b7c872332c116bacd113d661596affdR132-R151): Updated selectors to be more robust by using attributes like `aria-label`. Improved error handling for missing job links and titles. [[1]](diffhunk://#diff-dc19ee754afa8db50121eb04ed34a9287b7c872332c116bacd113d661596affdR132-R151) [[2]](diffhunk://#diff-dc19ee754afa8db50121eb04ed34a9287b7c872332c116bacd113d661596affdL157-R191) [[3]](diffhunk://#diff-dc19ee754afa8db50121eb04ed34a9287b7c872332c116bacd113d661596affdL235-R277) [[4]](diffhunk://#diff-dc19ee754afa8db50121eb04ed34a9287b7c872332c116bacd113d661596affdL261-R298)
+
+### Enhancements to offer processing:
+
+* [`src/offer_processor.py`](diffhunk://#diff-b82879d75a635a94c44c06df651e595be8aea2d4750063be1e2488357b34159bL107-R107): Increased the sleep time between processing offers from 3 seconds to 10 seconds to prevent rate limiting.
+
+### Updates to unit tests:
+
+* [`tests/unit/test_apple_scraper.py`](diffhunk://#diff-ea6206e71c2cb4591e38f3ada64ecb6dc7082464aae81c012a4bb16e394f9968L20-L21): Removed the unnecessary `extract_total_offers` method and added comprehensive mocks to simulate various scenarios in the `test_apple_load_all_offers` and `test_apple_extract_offers` tests. [[1]](diffhunk://#diff-ea6206e71c2cb4591e38f3ada64ecb6dc7082464aae81c012a4bb16e394f9968L20-L21) [[2]](diffhunk://#diff-ea6206e71c2cb4591e38f3ada64ecb6dc7082464aae81c012a4bb16e394f9968R34-R117)
+
+These changes aim to enhance the reliability and maintainability of the job scrapers and ensure more robust testing.
+
