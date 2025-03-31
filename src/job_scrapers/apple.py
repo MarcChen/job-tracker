@@ -1,9 +1,10 @@
 import random
+import re
 import time
 from typing import Dict, List, Union
 
 from selenium import webdriver
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
@@ -42,18 +43,11 @@ class AppleJobScraper(JobScraperBase):
     def load_all_offers(self) -> None:  # noqa: C901
         """
         Loads all available offers from the specified URL and extracts their URLs.
-        This method navigates to the URL specified in the instance, handles the cookie consent popup if present,
-        waits for the offers to load, and then extracts the URLs of the offers from the page.
-        Raises:
-            Exception: If there is an error loading the offers or extracting the URLs.
-        Side Effects:
-            - Updates the `self.offers_url` list with the URLs of the offers.
-            - Updates the `self.total_offers` with the count of the loaded offers.
         """
         try:
             self.driver.get(self.url)
 
-            # Handle cookies - adjust selector if different on the actual page
+            # Handle cookies
             try:
                 WebDriverWait(self.driver, 3).until(
                     EC.element_to_be_clickable((By.ID, "didomi-notice-agree-button"))
@@ -62,91 +56,106 @@ class AppleJobScraper(JobScraperBase):
             except Exception:
                 pass
 
-            # Wait for offers to load
-            WebDriverWait(self.driver, 15).until(
-                EC.presence_of_element_located(
-                    (By.CSS_SELECTOR, "a.table--advanced-search__title")
-                )
-            )
-            self.total_offers = int(
-                WebDriverWait(self.driver, 10)
-                .until(
-                    EC.presence_of_element_located(
-                        (By.XPATH, "//h2[@id='resultCount']/span[1]")
+            # Extract the total-offers number (e.g. "200 résultat(s)")
+            try:
+                total_offers_text = (
+                    WebDriverWait(self.driver, 15)
+                    .until(
+                        EC.presence_of_element_located(
+                            (By.CLASS_NAME, "t-eyebrow-reduced")
+                        )
                     )
+                    .text
                 )
-                .text.split()[0]
-            )
+                print(f"Total offers text found: {total_offers_text}")
 
-            # Find all offer rows
-            offer_rows = self.driver.find_elements(
-                By.CSS_SELECTOR, "tbody[id^='accordion_']"
-            )
+                match = re.search(r"(\d+)", total_offers_text)
+                if match:
+                    self.total_offers = int(match.group(1))
+                else:
+                    raise ValueError(
+                        f"Could not extract total offers from text: {total_offers_text}"
+                    )
+            except Exception as e:
+                raise ValueError(f"Could not determine total offers: {e}")
 
             loaded_offers = 0
 
             while loaded_offers < self.total_offers:
                 try:
-                    # time.sleep(random.uniform(1, 2))
+                    # Wait until at least one offer link is present
                     WebDriverWait(self.driver, 15).until(
                         EC.presence_of_element_located(
+                            # The new link class from your snippet
                             (
                                 By.CSS_SELECTOR,
-                                "a.table--advanced-search__title",
+                                "a.link-inline.t-intro.word-wrap-break-word",
                             )
                         )
                     )
+
+                    # Each job is now in <li data-core-accordion-item="">
                     offer_rows = self.driver.find_elements(
-                        By.CSS_SELECTOR, "tbody[id^='accordion_']"
+                        By.CSS_SELECTOR, "li[data-core-accordion-item]"
                     )
-                    # Extract URLs from title links
+
                     for row in offer_rows:
                         try:
-                            loaded_offers += 1
                             title_link = row.find_element(
-                                By.CSS_SELECTOR,
-                                "a.table--advanced-search__title",
+                                By.CLASS_NAME,
+                                "link-inline.t-intro.word-wrap-break-word",
                             )
                             job_title = title_link.text
+                            loaded_offers += 1
+
                             if self.should_skip_offer(job_title):
                                 continue
+
                             elif self.notion_client.offer_exists(
                                 title=job_title, source="Apple", company="Apple"
                             ):
                                 print(
-                                    f"Skipping offer '{job_title}' (already exists in Notion database)..."
+                                    f"Skipping offer '{job_title}' (already exists in Notion)..."
                                 )
                                 continue
                             else:
                                 self.offers_url.append(title_link.get_attribute("href"))
+
                         except Exception as e:
                             print(f"Error extracting link from row: {str(e)}")
 
                     print(f"Loaded {loaded_offers} / {self.total_offers}")
 
-                    # Scroll to the last offer row
+                    # Scroll to last job row
                     self.driver.execute_script(
-                        "arguments[0].scrollIntoView({block: 'center', inline: 'center'});",
+                        "arguments[0].scrollIntoView({block: 'center'});",
                         offer_rows[-1],
                     )
+                    time.sleep(random.uniform(1, 2))
 
+                    # The "next page" button no longer uses "li.pagination__next a[...]"
+                    # In your pasted HTML, the next button is:
+                    #   <button class="icon icon-chevronend" type="button" ...>
+                    #   or:
+                    #   <button aria-label="Page suivante" class="icon icon-chevronend" ...>
+                    # So we wait for that instead:
                     next_button = WebDriverWait(self.driver, 10).until(
                         EC.element_to_be_clickable(
                             (
                                 By.CSS_SELECTOR,
-                                "li.pagination__next a:not([aria-disabled='true'])",
+                                "button.icon.icon-chevronend:not([disabled])",
                             )
                         )
                     )
                     self.driver.execute_script(
-                        "arguments[0].scrollIntoView({block: 'center', inline: 'center'});",
+                        "arguments[0].scrollIntoView({block: 'center'});",
                         next_button,
                     )
                     self.driver.execute_script("arguments[0].click();", next_button)
                     time.sleep(random.uniform(1.5, 2.5))
 
-                except Exception:
-                    print("Reached last offer")
+                except TimeoutException:
+                    print("No more 'Next page' button found or last page reached.")
                     break
 
         except Exception as e:
@@ -184,24 +193,31 @@ class AppleJobScraper(JobScraperBase):
             try:
                 offer_data.update(
                     {
-                        "Title": extract_element(By.ID, "jdPostingTitle"),
-                        "Reference": extract_element(By.ID, "jobNumber"),
-                        "Location": extract_element(
-                            By.ID, "job-location-name", split_text=",", index=0
-                        ),  # Retrieve City
-                        "Schedule Type": extract_element(By.ID, "jobWeeklyHours"),
-                        "Job Type": extract_element(By.ID, "job-team-name"),
+                        "Title": extract_element(By.ID, "jobdetails-postingtitle"),
+                        "Reference": extract_element(By.ID, "jobdetails-jobnumber"),
+                        "Location": extract_element(By.ID, "jobdetails-joblocation"),
+                        "Schedule Type": extract_element(
+                            By.ID, "jobdetails-weeklyhours"
+                        ),
+                        "Job Type": extract_element(By.ID, "jobdetails-teamname"),
                         "Description": "\n".join(
                             [
-                                # extract_element(By.ID, "jd-job-summary"), Removed cuz description is too long
-                                "Job Description\n"
-                                + extract_element(By.ID, "jd-description")
-                                + "\n",
-                                "Minimum Qualification\n"
-                                + extract_element(By.ID, "jd-minimum-qualifications")
-                                + "\n",
-                                "Preferred Qualification\n"
-                                + extract_element(By.ID, "jd-preferred-qualifications"),
+                                extract_element(
+                                    By.ID,
+                                    "jobdetails-jobdetails-jobsummary-content-row",
+                                ),
+                                extract_element(
+                                    By.ID,
+                                    "jobdetails-jobdetails-jobdescription-content-row",
+                                ),
+                                extract_element(
+                                    By.ID,
+                                    "jobdetails-jobdetails-minimumqualifications-content-row",
+                                ),
+                                extract_element(
+                                    By.ID,
+                                    "jobdetails-jobdetails-preferredqualifications-content-row",
+                                ),
                             ]
                         ),
                         "URL": offer_url,

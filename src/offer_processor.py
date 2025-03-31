@@ -104,7 +104,7 @@ class OfferProcessor:
                     f"URL: {offer['URL']}\n"
                 )
             self.sms_client.send_sms(sms_message)
-            time.sleep(3)
+            time.sleep(10)
 
             job_properties = {
                 "Title": {
