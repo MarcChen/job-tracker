@@ -285,3 +285,7 @@ This pull request includes several updates to the job scrapers for Apple and Wel
 
 These changes aim to enhance the reliability and maintainability of the job scrapers and ensure more robust testing.
 
+## [1.7.3] - 2025-06-06
+- Merged PR #19 by @MarcChen: running container on self hosted
+
+
