@@ -36,4 +36,5 @@ jobs:
                      -e DATABASE_ID=$DATABASE_ID \
                      -e FREE_MOBILE_USER_ID=$FREE_MOBILE_USER_ID \
                      -e FREE_MOBILE_API_KEY=$FREE_MOBILE_API_KEY \
-                     ghcr.io/marcchen/vie-tracker:latest
+                     ghcr.io/marcchen/vie-tracker:latest \
+                     -- rm
