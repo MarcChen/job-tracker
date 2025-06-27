@@ -165,7 +165,7 @@ Additionally, minor improvements include importing necessary modules:
 * [`src/selenium_script.py`](diffhunk://#diff-e8253c08be5d3a0d2d00c1038b0d8459ea66224a0cb76ceb8099f0ccf85aa27eR3): Added `warnings` import.
 
 ## [1.5.0] - 2025-02-11
-- Merged PR #12 by @MarcChen: Feature : Code refacto 
+- Merged PR #12 by @MarcChen: Feature : Code refacto
 This pull request introduces several significant changes to the codebase, focusing on improving the testing workflows, refactoring the main application logic, and enhancing the Docker setup. Below are the most important changes grouped by their themes:
 
 ### Workflow and Testing Improvements:
@@ -216,7 +216,7 @@ Improvements to web scraping process:
 * [`src/job_scrapers/welcome_to_the_jungle.py`](diffhunk://#diff-dc19ee754afa8db50121eb04ed34a9287b7c872332c116bacd113d661596affdR77-R81): Added a wait condition to ensure the invisibility of an element with a high z-index before clicking the clear button. This change helps to avoid potential issues caused by overlapping elements during the interaction.
 
 ## [1.6.2] - 2025-02-12
-- Merged PR #15 by @MarcChen: fixing intercepted click - 2 
+- Merged PR #15 by @MarcChen: fixing intercepted click - 2
 This pull request includes changes to the `load_all_offers` method in the `src/job_scrapers/welcome_to_the_jungle.py` file to improve the functionality of interacting with the web page elements.
 
 Enhancements to web element interaction:
@@ -287,5 +287,3 @@ These changes aim to enhance the reliability and maintainability of the job scra
 
 ## [1.7.3] - 2025-06-06
 - Merged PR #19 by @MarcChen: running container on self hosted
-
-
