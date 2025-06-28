@@ -287,3 +287,28 @@ These changes aim to enhance the reliability and maintainability of the job scra
 
 ## [1.7.3] - 2025-06-06
 - Merged PR #19 by @MarcChen: running container on self hosted
+## [2.0.0] - 2025-06-28
+- Merged PR #20 by @MarcChen: Feat : Migration from Selenium to playwright
+This pull request introduces significant updates to the job tracker project, focusing on modernizing the codebase, improving maintainability, and enhancing functionality. Key changes include migrating to a new Docker base image, restructuring the project layout, adding pre-commit hooks, and updating CI/CD workflows. Below is a summary of the most important changes grouped by theme:
+
+### Project Modernization and Dependencies
+* Migrated from `selenium/standalone-chromium` to `mcr.microsoft.com/playwright/python:v1.51.0-noble` in the `Dockerfile`, enabling the use of Playwright for browser automation and improving security by running as a non-root user.
+* Updated `pyproject.toml` to version `2.0.0`, added Playwright and Pydantic dependencies, and restructured the package layout to use `services` instead of `src`. [[1]](diffhunk://#diff-50c86b7ed8ac2cf95bd48334961bf0530cdc77b5a56f852c5c61b89d735fd711L3-R14) [[2]](diffhunk://#diff-50c86b7ed8ac2cf95bd48334961bf0530cdc77b5a56f852c5c61b89d735fd711R26)
+* Added pre-commit hooks for code quality checks (`.pre-commit-config.yaml`), including trailing whitespace removal, YAML validation, and Python formatting with Black and Flake8.
+
+### CI/CD Workflow Enhancements
+* Refactored `.github/workflows/run-container.yml` to check for the existence of the `job-tracker:latest` Docker image before running the container and updated the cron schedule to every two days at 9:30 AM. [[1]](diffhunk://#diff-9d8fa071698624d0a009b95095bdbb9802888955407a82532e59666535968260L10-R10) [[2]](diffhunk://#diff-9d8fa071698624d0a009b95095bdbb9802888955407a82532e59666535968260L19-R30) [[3]](diffhunk://#diff-9d8fa071698624d0a009b95095bdbb9802888955407a82532e59666535968260L39-R42)
+* Removed the unit test job from `.github/workflows/validate-PR.yml` and the Docker build/push steps from `.github/workflows/versioning.yml`, simplifying the workflows. [[1]](diffhunk://#diff-14b4ce75de35f234703c58969492cd5f2871cb68be1344d95b431882c5426e1dL38-L70) [[2]](diffhunk://#diff-a939aacba1dba4141eda9eda616ff5e54462b324fbaebe0f8848c06964e67c68L100-L116)
+
+### Codebase Simplification
+* Replaced the `Makefile` with a new `build.sh` script for building and managing Docker images, including cleanup of older versions and tagging. [[1]](diffhunk://#diff-4d2a8eefdf2a9783512a35da4dc7676a66404b6f3826a8af9aad038722da6823R1-R51) [[2]](diffhunk://#diff-76ed074a9305c04054cdebb9e9aad2d818052b07091de1f20cad0bbac34ffb52L1-L19)
+* Refactored `main.py` to include a command-line interface for selecting scrapers, enabling debug mode, and customizing filters, while improving logging with Rich.
+
+### Configuration and Linting Improvements
+* Updated `.flake8` to ignore additional warnings (`W503`), added `.venv` and `.env` to the exclude list, and adjusted max line length to 88.
+
+### Miscellaneous
+* Updated `CHANGELOG.md` to reflect the changes introduced in this version.
+
+These updates collectively enhance the project's reliability, maintainability, and usability.
+
