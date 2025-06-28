@@ -6,6 +6,7 @@ from services.scraping.src.base_model.job_offer import (
     ContractType,
     JobOfferInput,
     JobSource,
+    generate_job_offer_id,
 )
 from services.scraping.src.base_model.job_scraper_base import JobScraperBase
 from services.storage.src.notion_integration import NotionClient
@@ -17,12 +18,12 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
     def __init__(
         self,
         url: str,
+        notion_client: NotionClient,
         keyword: str = "",
         location: str = "",
         include_filters: Optional[List[str]] = None,
         exclude_filters: Optional[List[str]] = None,
         debug: bool = False,
-        notion_client: Optional[NotionClient] = None,
         headless: bool = True,
     ):
         super().__init__(
@@ -31,11 +32,11 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
             exclude_filters=exclude_filters,
             debug=debug,
             headless=headless,
+            notion_client=notion_client,
+            _offers_urls=[],
         )
         self.keyword = keyword
         self.location = location
-        self.notion_client = notion_client
-        self.offers_urls = []
 
     async def extract_all_offers_url(self) -> None:  # noqa: C901
         """
@@ -121,11 +122,10 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
                             job_title = await title_links.first.text_content()
                             loaded_offers += 1
 
-                            if job_title and not self.should_skip_offer_comprehensive(
+                            if job_title and not self.filter_job_title(
                                 job_title=job_title,
-                                company="",  # Company will be filled when parsing individual offers
-                                source=JobSource.WELCOME_TO_THE_JUNGLE,
-                                notion_client=self.notion_client,
+                                include_filters=self.include_filters,
+                                exclude_filters=self.exclude_filters,
                             ):
 
                                 href = await title_link.get_attribute("href")
@@ -135,7 +135,16 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
                                         href = (
                                             "https://www.welcometothejungle.com" + href
                                         )
-                                    self.offers_urls.append(href)
+                                    self._offers_urls.append(
+                                        {
+                                            "url": href,
+                                            "id": generate_job_offer_id(
+                                                company="Apple",
+                                                title=job_title.strip(),
+                                                url=href,
+                                            ),
+                                        }
+                                    )
                                     print(
                                         f"Added offer URL: {href}" if self.debug else ""
                                     )
@@ -185,7 +194,7 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
                 break
 
         print(
-            f"Finished loading all available offers. Total URLs collected: {len(self.offers_urls)}"
+            f"Finished loading all available offers. Total URLs collected: {len(self._offers_urls)}"
         )
 
     async def parse_offers(self) -> List[JobOfferInput]:  # noqa: C901
@@ -200,9 +209,9 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
 
         offers = []
 
-        for offer_url in self.offers_urls:
+        for offer in self._offers_urls:
             try:
-                await self.page.goto(offer_url)
+                await self.page.goto(offer["url"])
                 await self.wait_random(1, 3)
 
                 # Extract title using base class method
@@ -332,7 +341,7 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
                     salary=salary or "N/A",
                     job_content_description=description,
                     source=JobSource.WELCOME_TO_THE_JUNGLE,
-                    url=offer_url,
+                    url=offer["url"],
                     scraped_at=datetime.utcnow(),
                 )
 
@@ -347,12 +356,12 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
                     print(f"  Salary: {salary}")
                     print(f"  Experience: {experience}")
                     print(f"  Remote: {remote_work}")
-                    print(f"  URL: {offer_url}")
+                    print(f"  URL: {offer['url']}")
                 else:
                     print(f"WTTJ offer extracted: {title} at {company}")
 
             except Exception as e:
-                warnings.warn(f"Error extracting data for offer {offer_url}: {e}")
+                warnings.warn(f"Error extracting data for offer {offer['url']}: {e}")
 
         return offers
 
@@ -391,13 +400,20 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
 
 
 if __name__ == "__main__":
-    # Example usage
+    import os
+
+    DATABASE_ID = os.getenv("DATABASE_ID")
+    NOTION_API = os.getenv("NOTION_API")
+    assert DATABASE_ID, "DATABASE_ID environment variable is not set."
+    assert NOTION_API, "NOTION_API environment variable is not set."
+    notion_client = NotionClient(NOTION_API, DATABASE_ID)
     scraper = WelcomeToTheJungleJobScraper(
-        url="https://jobs.apple.com/fr-fr/search?sort=relevance&location=france-FRAC+singapore-SGP+hong-kong-HKGC+taiwan-TWN",
+        url="https://www.welcometothejungle.com/fr/jobs?&refinementList%5Bcontract_type%5D%5B%5D=full_time&refinementList%5Bcontract_type%5D%5B%5D=temporary&refinementList%5Bcontract_type%5D%5B%5D=freelance",
         keyword="Pyspark",
         location="Paris",
         include_filters=["Data"],
         exclude_filters=["alternance", "stage", "apprenti"],
+        notion_client=notion_client,
         debug=True,
         headless=False,
     )

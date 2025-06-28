@@ -10,6 +10,7 @@ from services.scraping.src.base_model.job_offer import (
     JobOfferInput,
     JobSource,
 )
+from services.storage.src.notion_integration import NotionClient
 
 
 class JobScraperBase:
@@ -18,6 +19,10 @@ class JobScraperBase:
     def __init__(
         self,
         url: str,
+        notion_client: NotionClient,
+        _offers_urls: Optional[
+            List[dict]
+        ] = None,  # Each offer: {"url": ..., "id": ...}
         browser: Optional[Browser] = None,
         include_filters: Optional[List[str]] = None,
         exclude_filters: Optional[List[str]] = None,
@@ -30,6 +35,7 @@ class JobScraperBase:
 
         Args:
             url (str): The URL of the job listing page to scrape.
+            _offers_urls (List[dict], optional): List of _offers_urls, each as {"url": ..., "id": ...}.
             browser (Browser, optional): Playwright browser instance. If None, a new one will be created.
             include_filters (List[str], optional): Keywords that must be present in job titles.
             exclude_filters (List[str], optional): Keywords that should not be present in job titles.
@@ -38,12 +44,14 @@ class JobScraperBase:
             slow_mo (int): Slow down operations by specified milliseconds.
         """
         self.url = url
+        self._offers_urls = _offers_urls
         self.browser = browser
         self.include_filters = include_filters or []
         self.exclude_filters = exclude_filters or []
         self.debug = debug
         self.headless = headless
         self.slow_mo = slow_mo
+        self.notion_client = notion_client
 
         # Internal state
         self._playwright = None
@@ -51,7 +59,6 @@ class JobScraperBase:
         self._context = None
         self._page = None
         self._browser_owned = False
-        self._offer_urls_to_check = set()
 
     @property
     def page(self) -> Optional[Page]:
@@ -91,39 +98,14 @@ class JobScraperBase:
             title="",
             company="",
             location="",
-            source=JobSource.BUSINESS_FRANCE,
+            source=JobSource.UNKNOWN,
             url="",
             scraped_at=datetime.utcnow(),
         )
 
-    def should_skip_offer(self, job_title: str) -> bool:
-        """
-        Determine if an offer should be skipped based on include/exclude filters.
-
-        Args:
-            job_title (str): The job title to check.
-
-        Returns:
-            bool: True if the offer should be skipped, False otherwise.
-        """
-        if self.include_filters and not any(
-            keyword.lower() in job_title.lower() for keyword in self.include_filters
-        ):
-            print(f"Skipping offer '{job_title}' (doesn't match include filters)...")
-            return True
-        if self.exclude_filters and any(
-            keyword.lower() in job_title.lower() for keyword in self.exclude_filters
-        ):
-            print(f"Skipping offer '{job_title}' (matches exclude filters)...")
-            return True
-        return False
-
-    def should_skip_offer_comprehensive(
+    def filter_job_title(
         self,
         job_title: str,
-        company: str,
-        source: JobSource,
-        notion_client=None,
         include_filters: Optional[List[str]] = None,
         exclude_filters: Optional[List[str]] = None,
     ) -> bool:
@@ -168,23 +150,63 @@ class JobScraperBase:
             )
             return True
 
-        # Check if offer already exists in Notion (if client provided)
-        if notion_client and hasattr(notion_client, "offer_exists"):
-            try:
-                if notion_client.offer_exists(
-                    title=job_title, source=source, company=company
-                ):
-                    print(
-                        f"Skipping offer '{job_title}' (already exists in Notion database)..."
-                    )
-                    return True
-            except Exception as e:
-                if self.debug:
-                    print(
-                        f"Warning: Failed to check Notion existence for '{job_title}': {e}"
-                    )
-
         return False
+
+    async def filter_already_scraped_offers(  # noqa: C901
+        self, notion_client: NotionClient
+    ) -> None:
+        """
+        Check if offers already exist in the Notion database and remove existing ones from self._offers_urls.
+
+        This method extracts all IDs from self._offers_urls, queries Notion in batch to check which ones
+        already exist, and then removes the existing offers from the list.
+
+        Args:
+            notion_client (NotionClient): The Notion client to use for checking existence.
+        """
+        if not self._offers_urls:
+            if self.debug:
+                print("No offers to filter - _offers_urls is empty")
+            return
+
+        # Extract all IDs from the offers_urls list, filtering out None values
+        offer_ids = []
+        for offer_dict in self._offers_urls:
+            offer_id = offer_dict.get("id")
+            if offer_id is not None and isinstance(offer_id, str):
+                offer_ids.append(offer_id)
+
+        if not offer_ids:
+            if self.debug:
+                print("No valid offer IDs found in _offers_urls")
+            return
+
+        if self.debug:
+            print(f"Checking {len(offer_ids)} offers against Notion database...")
+
+        # Use NotionClient's batch checking method
+        existence_results = notion_client._check_multiple_offers_exist(offer_ids)
+
+        # Filter out existing offers from self._offers_urls
+        initial_count = len(self._offers_urls)
+        filtered_offers = []
+        for offer_dict in self._offers_urls:
+            offer_id = offer_dict.get("id")
+            # Keep offer if ID is None/invalid or if it doesn't exist in Notion
+            if (
+                offer_id is None
+                or not isinstance(offer_id, str)
+                or not existence_results.get(offer_id, False)
+            ):
+                filtered_offers.append(offer_dict)
+
+        self._offers_urls = filtered_offers
+
+        filtered_count = initial_count - len(self._offers_urls)
+        if self.debug or filtered_count > 0:
+            print(
+                f"Filtered out {filtered_count} existing offers. {len(self._offers_urls)} offers remaining."
+            )
 
     def convert_to_job_offer(self, offer_input: JobOfferInput) -> Optional[JobOffer]:
         """
@@ -353,6 +375,7 @@ class JobScraperBase:
         await self._setup_browser()
         try:
             await self.extract_all_offers_url()
+            await self.filter_already_scraped_offers(self.notion_client)
             raw_offers = await self.parse_offers()
 
             validated_offers = []

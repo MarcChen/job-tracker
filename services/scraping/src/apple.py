@@ -7,6 +7,7 @@ from services.scraping.src.base_model.job_offer import (
     ContractType,
     JobOfferInput,
     JobSource,
+    generate_job_offer_id,
 )
 from services.scraping.src.base_model.job_scraper_base import JobScraperBase
 from services.storage.src.notion_integration import NotionClient
@@ -18,21 +19,21 @@ class AppleJobScraper(JobScraperBase):
     def __init__(
         self,
         url: str,
+        notion_client: NotionClient,
         include_filters: Optional[List[str]] = None,
         exclude_filters: Optional[List[str]] = None,
         debug: bool = False,
-        notion_client: Optional[NotionClient] = None,
         headless: bool = True,
     ):
         super().__init__(
             url=url,
+            notion_client=notion_client,
             include_filters=include_filters,
             exclude_filters=exclude_filters,
             debug=debug,
             headless=headless,
         )
-        self.notion_client = notion_client
-        self.offers_urls = []
+        self._offers_urls = []
 
     async def extract_all_offers_url(self) -> None:  # noqa: C901
         """
@@ -97,23 +98,32 @@ class AppleJobScraper(JobScraperBase):
 
                             if await title_link.count() > 0:
                                 job_title = await title_link.text_content()
-
-                                if job_title and self.should_skip_offer_comprehensive(
-                                    job_title=job_title.strip(),
-                                    company="Apple",
-                                    source=JobSource.APPLE,
-                                    notion_client=self.notion_client,
-                                ):
-                                    continue
-
                                 href = await title_link.get_attribute("href")
-                                if href:
+
+                                if href and job_title:
                                     # Construct full URL if needed
                                     if href.startswith("/"):
                                         full_url = f"https://jobs.apple.com{href}"
                                     else:
                                         full_url = href
-                                    self.offers_urls.append(full_url)
+
+                                    if self.filter_job_title(
+                                        job_title=job_title.strip(),
+                                        include_filters=self.include_filters,
+                                        exclude_filters=self.exclude_filters,
+                                    ):
+                                        continue
+
+                                    self._offers_urls.append(
+                                        {
+                                            "url": full_url,
+                                            "id": generate_job_offer_id(
+                                                company="Apple",
+                                                title=job_title.strip(),
+                                                url=full_url,
+                                            ),
+                                        }
+                                    )
 
                         except Exception as e:
                             print(f"Error extracting offer {i}: {e}")
@@ -151,7 +161,7 @@ class AppleJobScraper(JobScraperBase):
             raise ValueError(f"Error loading offers: {str(e)}")
 
         print("Finished loading all available offers.")
-        print(f"Total after filters: {len(self.offers_urls)}")
+        print(f"Total after filters: {len(self._offers_urls)}")
 
     async def parse_offers(self) -> List[JobOfferInput]:
         """
@@ -165,9 +175,9 @@ class AppleJobScraper(JobScraperBase):
 
         offers = []
 
-        for offer_url in self.offers_urls:
+        for offer in self._offers_urls:
             try:
-                await self.page.goto(offer_url)
+                await self.page.goto(offer["url"])
                 await self.wait_random(1, 3)
 
                 # Extract offer data using the selectors from the working legacy code
@@ -205,7 +215,7 @@ class AppleJobScraper(JobScraperBase):
                     schedule_type=schedule_type,
                     job_content_description=description,
                     source=JobSource.APPLE,
-                    url=offer_url,
+                    url=offer["url"],
                     scraped_at=datetime.utcnow(),
                 )
 
@@ -214,17 +224,24 @@ class AppleJobScraper(JobScraperBase):
                     print(f"Apple offer extracted: {title} at Apple ({location})")
 
             except Exception as e:
-                warnings.warn(f"Error extracting data for offer {offer_url}: {e}")
+                warnings.warn(f"Error extracting data for offer {offer['url']}: {e}")
                 if self.debug:
-                    print(f"Failed to extract data from URL: {offer_url}")
+                    print(f"Failed to extract data from URL: {offer['url']}")
 
         return offers
 
 
 if __name__ == "__main__":
-    # Example usage
+    import os
+
+    DATABASE_ID = os.getenv("DATABASE_ID")
+    NOTION_API = os.getenv("NOTION_API")
+    assert DATABASE_ID, "DATABASE_ID environment variable is not set."
+    assert NOTION_API, "NOTION_API environment variable is not set."
+    notion_client = NotionClient(NOTION_API, DATABASE_ID)
     scraper = AppleJobScraper(
         url="https://jobs.apple.com/fr-fr/search?sort=relevance&location=france-FRAC",
+        notion_client=notion_client,
         include_filters=["engineer", "software", "data"],
         exclude_filters=["intern", "internship"],
         debug=True,

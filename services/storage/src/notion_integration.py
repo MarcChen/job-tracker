@@ -1,6 +1,8 @@
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 from notion_client import Client
+
+from services.scraping.src.base_model.job_offer import JobOffer
 
 
 class NotionClient:
@@ -11,54 +13,143 @@ class NotionClient:
         Args:
             notion_api_key (str): Notion API key.
             database_id (str): Notion database ID.
+
+        Raises:
+            ValueError: If either notion_api_key or database_id is empty or None.
         """
+        if not notion_api_key or not database_id:
+            raise ValueError(
+                "Both notion_api_key and database_id must be provided and non-empty"
+            )
+
         self.database_id = database_id
         self.client = Client(auth=notion_api_key)
-        self.all_offers = self.get_all_offers()
 
     def offer_exists(
-        self, title: str, source: str, company: Optional[str] = None
-    ) -> bool:
+        self, job_offers: Union[JobOffer, List[JobOffer]]
+    ) -> Union[bool, Dict[str, bool]]:
         """
-        Checks if an offer with the given properties already exists in the loaded offers.
+        Checks if job offer(s) already exist in the Notion database based on their offer ID.
 
         Args:
-            title (str): Title of the offer.
-            source (str): Source of the offer.
-            company (Optional[str]): Company of the offer.
-            url (Optional[str]): URL of the offer.
+            job_offers: A single JobOffer instance or list of JobOffer instances to check.
+
+        Returns:
+            If single JobOffer: bool indicating if the offer exists.
+            If list of JobOffers: Dict mapping offer_id to bool indicating existence.
+        """
+        # Handle single JobOffer
+        if isinstance(job_offers, JobOffer):
+            return self._check_single_offer_exists(job_offers.offer_id)
+
+        # Handle list of JobOffers - batch query
+        if not job_offers:
+            return {}
+
+        offer_ids = [offer.offer_id for offer in job_offers]
+        return self._check_multiple_offers_exist(offer_ids)
+
+    def _check_single_offer_exists(self, offer_id: str) -> bool:
+        """
+        Check if a single offer exists by querying the database for the offer ID.
+
+        Args:
+            offer_id: The 5-digit offer ID to search for.
 
         Returns:
             bool: True if the offer exists, False otherwise.
         """
-        for offer in self.all_offers:
-            if (
-                offer.get("Title", "").lower() == title.lower()
-                and offer.get("Source", "").lower() == source.lower()
-                and (not company or offer.get("Company", "").lower() == company.lower())
-            ):
-                return True
-        return False
+        try:
+            query = {
+                "database_id": self.database_id,
+                "filter": {"property": "Offer ID", "rich_text": {"equals": offer_id}},
+            }
+            response = self.client.databases.query(**query)
+            return len(response.get("results", [])) > 0
+        except Exception as e:
+            print(f"Error checking if offer {offer_id} exists: {e}")
+            return False
 
-    def create_page(self, properties: Dict) -> Optional[Dict]:
+    def _check_multiple_offers_exist(self, offer_ids: List[str]) -> Dict[str, bool]:
         """
-        Creates a new page in the specified Notion database if the title does not already exist.
+        Check if multiple offers exist by querying the database with a filter for all offer IDs.
+
+        Args:
+            offer_ids: List of 5-digit offer IDs to search for.
+
+        Returns:
+            Dict mapping offer_id to bool indicating existence.
+        """
+        result = {offer_id: False for offer_id in offer_ids}
+
+        if not offer_ids:
+            return result
+
+        try:
+            # Build OR filter for all offer IDs
+            if len(offer_ids) == 1:
+                # Single offer ID - use simple filter
+                filter_condition = {
+                    "property": "Offer ID",
+                    "rich_text": {"equals": offer_ids[0]},
+                }
+            else:
+                # Multiple offer IDs - use OR filter
+                filter_condition = {
+                    "or": [
+                        {"property": "Offer ID", "rich_text": {"equals": offer_id}}
+                        for offer_id in offer_ids
+                    ]
+                }
+
+            query = {"database_id": self.database_id, "filter": filter_condition}
+
+            # Get all pages that match any of the offer IDs
+            response = self.client.databases.query(**query)
+
+            # Extract existing offer IDs from results
+            existing_ids = set()
+            for page in response.get("results", []):
+                properties = page.get("properties", {})
+                existing_offer_id = self._extract_offer_id(properties)
+                if existing_offer_id:
+                    existing_ids.add(existing_offer_id)
+
+            # Check which of our offer IDs exist
+            for offer_id in offer_ids:
+                result[offer_id] = offer_id in existing_ids
+
+        except Exception as e:
+            print(f"Error checking multiple offers existence: {e}")
+
+        return result
+
+    def create_page(
+        self, properties: Dict, job_offer: Optional[JobOffer] = None
+    ) -> Optional[Dict]:
+        """
+        Creates a new page in the specified Notion database if the offer does not already exist.
 
         Args:
             properties (Dict): A dictionary containing the properties for the new page.
+            job_offer (Optional[JobOffer]): JobOffer instance to check for existence.
+                                          If not provided, will create page without checking.
 
         Returns:
             Optional[Dict]: The JSON response from the Notion API if successful; None otherwise.
         """
         title = self._extract_title(properties)
-        company = self._extract_select(properties, "Company")
-        source = self._extract_select(properties, "Source")
         if not title:
             print("Error: Title property is required to create a page.")
             return None
-        if self.offer_exists(title, source, company=company):
-            print(f"Offer with title '{title}' already exists. Skipping creation.")
+
+        # Check if offer exists only if JobOffer is provided
+        if job_offer and self.offer_exists(job_offer):
+            print(
+                f"Offer with ID '{job_offer.offer_id}' already exists. Skipping creation."
+            )
             return None
+
         payload = {
             "parent": {"database_id": self.database_id},
             "properties": properties,
@@ -71,6 +162,57 @@ class NotionClient:
             print(f"Error creating page '{title}': {e}")
             print(f"Payload: {payload}")
             return None
+
+    def create_page_from_job_offer(self, job_offer: JobOffer) -> Optional[Dict]:
+        """
+        Creates a new page in the Notion database from a JobOffer instance.
+
+        Args:
+            job_offer (JobOffer): The JobOffer instance to create a page for.
+
+        Returns:
+            Optional[Dict]: The JSON response from the Notion API if successful; None otherwise.
+        """
+        properties = job_offer.to_notion_format()
+        return self.create_page(properties, job_offer)
+
+    def create_pages_from_job_offers(
+        self, job_offers: List[JobOffer]
+    ) -> List[Optional[Dict]]:
+        """
+        Creates multiple pages in the Notion database from a list of JobOffer instances.
+        Uses batch checking to efficiently determine which offers already exist.
+
+        Args:
+            job_offers (List[JobOffer]): List of JobOffer instances to create pages for.
+
+        Returns:
+            List[Optional[Dict]]: List of results from the Notion API for each offer.
+        """
+        if not job_offers:
+            return []
+
+        # Batch check which offers already exist
+        existence_result = self.offer_exists(job_offers)
+
+        results = []
+        for job_offer in job_offers:
+            # existence_result is a Dict[str, bool] when checking multiple offers
+            if isinstance(existence_result, dict) and existence_result.get(
+                job_offer.offer_id, False
+            ):
+                print(
+                    f"Offer with ID '{job_offer.offer_id}' already exists. Skipping creation."
+                )
+                results.append(None)
+            else:
+                properties = job_offer.to_notion_format()
+                result = self.create_page(
+                    properties, None
+                )  # Skip existence check since we already did it
+                results.append(result)
+
+        return results
 
     def _fetch_all_results(self, query: Dict) -> List[dict]:
         """
@@ -127,10 +269,16 @@ class NotionClient:
         url = properties.get(field_name, {}).get("url", "")
         return url if url else ""
 
+    def _extract_offer_id(self, properties: dict) -> str:
+        """
+        Extracts the offer ID from a rich_text property.
+        """
+        return self._extract_rich_text(properties, "Offer ID")
+
     def get_all_offers(self) -> List[Dict]:
         """
         Retrieves all offers from the Notion database, returning a list of dictionaries
-        with each offer's properties: 'Title', 'Company', 'Location', 'Source', and 'URL'.
+        with each offer's properties including the Offer ID.
 
         Returns:
             List[dict]: A list of dictionaries with offer properties.
@@ -147,6 +295,7 @@ class NotionClient:
                 "Location": self._extract_select(properties, "Location"),
                 "Source": self._extract_select(properties, "Source"),
                 "URL": self._extract_url(properties, "URL"),
+                "Offer ID": self._extract_offer_id(properties),
             }
             offers.append(offer)
         return offers
@@ -191,4 +340,4 @@ if __name__ == "__main__":
     assert DATABASE_ID, "DATABASE_ID environment variable is not set."
     assert NOTION_API, "NOTION_API environment variable is not set."
     notion_client = NotionClient(NOTION_API, DATABASE_ID)
-    notion_client.delete_duplicate_offers()
+    # notion_client.delete_duplicate_offers()

@@ -10,14 +10,14 @@ from typing import Any, Dict, Optional
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
-def generate_job_offer_id(company: str, title: str, url: str) -> str:
+def generate_job_offer_id(company: str, title: str, url: Optional[str] = None) -> str:
     """
     Generate a unique 5-digit ID for a job offer based on company, title, and URL.
 
     Args:
         company: Company name
         title: Job title
-        url: Job posting URL
+        url: Job posting URL (optional, defaults to empty string if None)
 
     Returns:
         5-digit string ID
@@ -25,7 +25,7 @@ def generate_job_offer_id(company: str, title: str, url: str) -> str:
     # Normalize inputs by stripping whitespace and converting to lowercase
     normalized_company = company.strip().lower()
     normalized_title = title.strip().lower()
-    normalized_url = url.strip().lower()
+    normalized_url = (url or "").strip().lower()
 
     # Create a combined string for hashing
     combined_string = f"{normalized_company}|{normalized_title}|{normalized_url}"
@@ -49,6 +49,7 @@ class JobSource(str, Enum):
     AIR_FRANCE = "Air France"
     APPLE = "Apple"
     WELCOME_TO_THE_JUNGLE = "Welcome to the Jungle"
+    UNKNOWN = "Unknown"  # For cases where the source is not recognized
 
 
 class JobURL(str, Enum):
@@ -71,8 +72,8 @@ class ContractType(str, Enum):
     INTERNSHIP = "Stage"
     FREELANCE = "Freelance"
     TEMPORARY = "Temporary"
-    FULL_TIME = "Full-time"
-    PART_TIME = "Part-time"
+    FULL_TIME = "Full time"
+    PART_TIME = "Part time"
     VIE = "VIE"
     OTHER = "Other"
 
@@ -157,6 +158,27 @@ class JobOffer(BaseModel):
             raise ValueError('Field cannot be "N/A"')
         return v
 
+    @field_validator(
+        "company",
+        "location",
+        "source",
+        "contract_type",
+        "salary",
+        "duration",
+        "reference",
+        "schedule_type",
+    )
+    @classmethod
+    def clean_notion_select_fields(cls, v: Optional[str]) -> Optional[str]:
+        """Remove problematic characters (-,.) from fields used with notion_select."""
+        if v is None:
+            return v
+        # Remove hyphens, commas, and periods
+        cleaned = v.replace("-", " ").replace(",", " ").replace(".", " ")
+        # Replace multiple spaces with single space and strip
+        cleaned = " ".join(cleaned.split())
+        return cleaned
+
     @model_validator(mode="after")
     def generate_offer_id(self) -> "JobOffer":
         """Auto-generate offer_id if not provided and validate it's 5 digits."""
@@ -187,35 +209,36 @@ class JobOffer(BaseModel):
         Returns:
             Dict containing Notion-compatible page properties
         """
+
+        # Helper to map a value to a Notion select option (by name)
+        def notion_select(name):
+            return {"select": {"name": name if name else "N/A"}}
+
+        # Helper to map a value to a Notion rich_text property
+        def notion_rich_text(content):
+            return {
+                "rich_text": [
+                    {"text": {"content": content[:2000] if content else "N/A"}}
+                ]
+            }
+
         return {
             "Title": {"title": [{"text": {"content": self.title}}]},
-            "Company": {"select": {"name": self.company}},
-            "Location": {"select": {"name": self.location}},
-            "Source": {"select": {"name": self.source}},
+            "Company": notion_select(self.company),
+            "Location": notion_select(self.location),
+            "Source": notion_select(self.source),
             "URL": {"url": self.url},
-            "Offer ID": {"rich_text": [{"text": {"content": self.offer_id}}]},
-            "Contract Type": {
-                "select": {
-                    "name": self.contract_type.value if self.contract_type else "N/A"
-                }
-            },
-            "Salary": {"rich_text": [{"text": {"content": self.salary or "N/A"}}]},
-            "Duration": {"rich_text": [{"text": {"content": self.duration or "N/A"}}]},
-            "Reference": {
-                "rich_text": [{"text": {"content": self.reference or "N/A"}}]
-            },
-            "Schedule Type": {"select": {"name": self.schedule_type or "N/A"}},
-            "Job Content Description": {
-                "rich_text": [
-                    {
-                        "text": {
-                            "content": (self.job_content_description or "N/A")[
-                                :2000
-                            ]  # Notion has a limit
-                        }
-                    }
-                ]
-            },
+            "Offer ID": notion_rich_text(self.offer_id),
+            "Contract Type": notion_select(
+                self.contract_type if self.contract_type else "N/A"
+            ),
+            "Salary": notion_select(self.salary if self.salary else "Non spécifié"),
+            "Duration": notion_select(self.duration if self.duration else "N/A"),
+            "Reference": notion_select(self.reference if self.reference else "N/A"),
+            "Schedule Type": notion_select(
+                self.schedule_type if self.schedule_type else "N/A"
+            ),
+            "Job Content Description": notion_rich_text(self.job_content_description),
         }
 
     def to_legacy_dict(self) -> Dict[str, Any]:

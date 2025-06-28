@@ -150,6 +150,42 @@ def test_legacy_format():
     print("✅ Legacy format tests passed!")
 
 
+def test_id_generation_with_none_url():
+    """Test ID generation when URL is None."""
+    print("\n=== Testing ID Generation with None URL ===")
+
+    # Test with None URL
+    company = "Apple Inc."
+    title = "Software Engineer"
+
+    id1 = generate_job_offer_id(company, title, None)
+    print(f"Generated ID with None URL: {id1}")
+    assert len(id1) == 5, "ID should be 5 digits long"
+    assert id1.isdigit(), "ID should contain only digits"
+
+    # Test that same inputs with None URL produce same ID
+    id2 = generate_job_offer_id(company, title, None)
+    print(f"Generated ID with None URL (repeat): {id2}")
+    assert id1 == id2, "Same inputs with None URL should produce same ID"
+
+    # Test that None URL and empty string URL produce same ID
+    id3 = generate_job_offer_id(company, title, "")
+    print(f"Generated ID with empty string URL: {id3}")
+    assert id1 == id3, "None URL and empty string URL should produce same ID"
+
+    # Test that None URL produces different ID than actual URL
+    id4 = generate_job_offer_id(company, title, "https://jobs.apple.com/123")
+    print(f"Generated ID with actual URL: {id4}")
+    assert id1 != id4, "None URL and actual URL should produce different IDs"
+
+    # Test with default parameter (not passing URL at all)
+    id5 = generate_job_offer_id(company, title)
+    print(f"Generated ID with default URL parameter: {id5}")
+    assert id1 == id5, "None URL and default parameter should produce same ID"
+
+    print("✅ ID generation with None URL tests passed!")
+
+
 if __name__ == "__main__":
     print("Testing Job Offer ID Generation System\n")
 
@@ -159,6 +195,7 @@ if __name__ == "__main__":
         test_job_offer_input()
         test_notion_format()
         test_legacy_format()
+        test_id_generation_with_none_url()
 
         print("\n🎉 All tests passed! ID generation system is working correctly.")
 

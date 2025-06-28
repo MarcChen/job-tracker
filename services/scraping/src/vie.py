@@ -17,20 +17,21 @@ class VIEJobScraper(JobScraperBase):
     def __init__(
         self,
         url: str,
+        notion_client: NotionClient,
         include_filters: Optional[List[str]] = None,
         exclude_filters: Optional[List[str]] = None,
         debug: bool = False,
-        notion_client: Optional[NotionClient] = None,
         headless: bool = True,
     ):
         super().__init__(
             url=url,
+            notion_client=notion_client,
             include_filters=include_filters,
             exclude_filters=exclude_filters,
             debug=debug,
             headless=headless,
         )
-        self.notion_client = notion_client
+        self._offers_urls = []
 
     async def extract_all_offers_url(self) -> None:
         """
@@ -107,11 +108,10 @@ class VIEJobScraper(JobScraperBase):
                 )
 
                 # Apply comprehensive filtering (includes filters + Notion existence check)
-                if self.should_skip_offer_comprehensive(
+                if self.filter_job_title(
                     job_title=title,
-                    company=company,
-                    source=JobSource.BUSINESS_FRANCE,
-                    notion_client=self.notion_client,
+                    include_filters=self.include_filters,
+                    exclude_filters=self.exclude_filters,
                 ):
                     continue
 
@@ -152,11 +152,18 @@ class VIEJobScraper(JobScraperBase):
 
 
 if __name__ == "__main__":
-    # Example usage - Method 1: Using the full scrape_async() method (recommended)
+    import os
+
+    DATABASE_ID = os.getenv("DATABASE_ID")
+    NOTION_API = os.getenv("NOTION_API")
+    assert DATABASE_ID, "DATABASE_ID environment variable is not set."
+    assert NOTION_API, "NOTION_API environment variable is not set."
+    notion_client = NotionClient(NOTION_API, DATABASE_ID)
     scraper = VIEJobScraper(
         url="https://mon-vie-via.businessfrance.fr/offres/recherche?query=Data%20Engineer",
         include_filters=["data", "engineer", "software"],
         exclude_filters=["intern", "stage"],
+        notion_client=notion_client,
         debug=True,
         headless=False,  # Set to True for production
     )

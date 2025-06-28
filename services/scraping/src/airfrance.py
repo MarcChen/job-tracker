@@ -6,6 +6,7 @@ from services.scraping.src.base_model.job_offer import (
     ContractType,
     JobOfferInput,
     JobSource,
+    generate_job_offer_id,
 )
 from services.scraping.src.base_model.job_scraper_base import JobScraperBase
 from services.storage.src.notion_integration import NotionClient
@@ -17,12 +18,12 @@ class AirFranceJobScraper(JobScraperBase):
     def __init__(
         self,
         url: str,
+        notion_client: NotionClient,
         keyword: str = "",
         contract_type: str = "",
         include_filters: Optional[List[str]] = None,
         exclude_filters: Optional[List[str]] = None,
         debug: bool = False,
-        notion_client: Optional[NotionClient] = None,
         headless: bool = True,
     ):
         super().__init__(
@@ -31,12 +32,15 @@ class AirFranceJobScraper(JobScraperBase):
             exclude_filters=exclude_filters,
             debug=debug,
             headless=headless,
+            _offers_urls=[],
+            notion_client=notion_client,
         )
         self.keyword = keyword
         self.contract_type = contract_type
         self.notion_client = notion_client
-        self.offers_urls = []
+        self._offers_urls = []
         self.total_offers = 0
+        self.notion_client = notion_client
 
     async def extract_all_offers_url(self) -> None:  # noqa: C901
         """
@@ -156,19 +160,24 @@ class AirFranceJobScraper(JobScraperBase):
                                 ".ts-offer-list-item__title-link"
                             )
                             title = await title_link.text_content()
+                            url = await title_link.get_attribute("href")
 
-                            if title and self.should_skip_offer_comprehensive(
+                            if title and self.filter_job_title(
                                 job_title=title.strip(),
-                                company="Airfrance",
-                                source=JobSource.AIR_FRANCE,
-                                notion_client=self.notion_client,
+                                include_filters=self.include_filters,
+                                exclude_filters=self.exclude_filters,
                             ):
                                 continue
 
-                            url = await title_link.get_attribute("href")
                             if url:
-                                self.offers_urls.append(
-                                    "https://recrutement.airfrance.com/" + url
+                                url = "https://recrutement.airfrance.com/" + url
+                                self._offers_urls.append(
+                                    {
+                                        "url": url,
+                                        "id": generate_job_offer_id(
+                                            company="Air France", url=url, title=title
+                                        ),
+                                    }
                                 )
 
                         except Exception as e:
@@ -206,7 +215,7 @@ class AirFranceJobScraper(JobScraperBase):
             raise ValueError(f"Error loading offers: {str(e)}")
 
         print("Finished loading all available offers.")
-        print(f"Total after filters : {len(self.offers_urls)}")
+        print(f"Total after filters : {len(self._offers_urls)}")
 
     async def parse_offers(self) -> List[JobOfferInput]:  # noqa: C901
         """
@@ -220,9 +229,9 @@ class AirFranceJobScraper(JobScraperBase):
 
         offers = []
 
-        for offer_url in self.offers_urls:
+        for offer in self._offers_urls:
             try:
-                await self.page.goto(offer_url)
+                await self.page.goto(offer["url"])
                 await self.wait_random(1, 3)
 
                 # Extract offer data
@@ -305,7 +314,7 @@ class AirFranceJobScraper(JobScraperBase):
                     job_content_description=description,
                     reference=reference,
                     source=JobSource.AIR_FRANCE,
-                    url=offer_url,
+                    url=offer["url"],
                     scraped_at=datetime.utcnow(),
                 )
 
@@ -314,12 +323,19 @@ class AirFranceJobScraper(JobScraperBase):
                     print(f"Air France offer extracted: {title} at {company}")
 
             except Exception as e:
-                warnings.warn(f"Error extracting data for offer {offer_url}: {e}")
+                warnings.warn(f"Error extracting data for offer {offer['url']}: {e}")
 
         return offers
 
 
 if __name__ == "__main__":
+    import os
+
+    DATABASE_ID = os.getenv("DATABASE_ID")
+    NOTION_API = os.getenv("NOTION_API")
+    assert DATABASE_ID, "DATABASE_ID environment variable is not set."
+    assert NOTION_API, "NOTION_API environment variable is not set."
+    notion_client = NotionClient(NOTION_API, DATABASE_ID)
     scraper = AirFranceJobScraper(
         url="https://recrutement.airfrance.com/offre-de-emploi/liste-offres.aspx/",
         keyword="data",
@@ -328,6 +344,7 @@ if __name__ == "__main__":
         exclude_filters=["stage", "alternance", "apprenti"],
         debug=True,
         headless=False,
+        notion_client=notion_client,
     )
     offers = scraper.scrape()
     print(offers)
