@@ -113,4 +113,3 @@ You can access the Notion database [here](https://kemar.notion.site/16919fda9f9d
 
 ## Contributing
 Contributions are welcome! Please fork the repository and submit a pull request.
-

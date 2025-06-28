@@ -1,15 +1,17 @@
 [tool.poetry]
 name = "Job scrappers"
-version = "1.4.4"
+version = "2.0.0"
 description = "A package to scrap job offers, send SMS notifications through a free SMS API, and transfer data to a Notion DB."
 authors = ["Marc <128506536+MarcChen@users.noreply.github.com>"]
 packages = [
-    { include = "src" }
+    { include = "services" }
 ]
 
 [tool.poetry.dependencies]
 python = "^3.10"
 selenium = "4.9.1"
+playwright = "^1.48.0"
+pydantic = "^2.10.0"
 beautifulsoup4 = "4.12.2"
 lxml = "4.9.3"
 requests = "2.31.0"
@@ -21,6 +23,7 @@ pytest = "^7.0.1"
 flake8 = "^7.1.1"
 black = "^22.3.0"
 isort = "^6.0.0"
+pre-commit = "^4.2.0"
 
 [tool.isort]
 profile = "black"
