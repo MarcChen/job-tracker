@@ -1,159 +1,276 @@
 import os
 import time
-from typing import Any, Dict
+from typing import Dict, List, Optional
 
 from rich.progress import Progress
 
 from services.notifications.sms_alert import SMSAPI
+from services.scraping.src.airfrance import AirFranceJobScraper
+from services.scraping.src.apple import AppleJobScraper
+from services.scraping.src.base_model.job_offer import JobOffer
+from services.scraping.src.config import get_scrapers_config
+from services.scraping.src.vie import VIEJobScraper
+from services.scraping.src.welcome_to_the_jungle import WelcomeToTheJungleJobScraper
 from services.storage.src.notion_integration import NotionClient
 
 
 class OfferProcessor:
     """
-    Processes job offers by sending SMS notifications and creating corresponding pages in Notion.
+    Enhanced processor for job offers using the new Pydantic models and efficient scraping.
+
+    This class handles the complete pipeline from scraping to notification and storage:
+    1. Uses scraping infrastructure to get offers from selected sources
+    2. Efficiently checks for existing offers using batch operations
+    3. Sends SMS notifications for new offers
+    4. Creates Notion pages for storage
 
     Attributes:
-        notion_client: An instance of NotionClient initialized with the NOTION_API and DATABASE_ID.
-        sms_client: An instance of SMSAPI initialized with FREE_MOBILE_USER_ID and FREE_MOBILE_API_KEY.
-        total_offers (int): Total number of job offers.
-        offers (List[dict]): List containing job offer dictionaries.
+        notion_client: An instance of NotionClient for database operations.
+        sms_client: An instance of SMSAPI for sending notifications.
+        selected_scrapers: List of scraper IDs to use for scraping.
+        include_filters: Keywords that must be present in job titles.
+        exclude_filters: Keywords that should not be present in job titles.
+        debug: Enable debug logging.
     """
 
-    def __init__(self, data: Dict[str, Any], notion_client: NotionClient):
-        DATABASE_ID = os.getenv("DATABASE_ID")
-        NOTION_API = os.getenv("NOTION_API")
+    def __init__(
+        self,
+        notion_client: NotionClient,
+        selected_scrapers: Optional[List[str]] = None,
+        include_filters: Optional[List[str]] = None,
+        exclude_filters: Optional[List[str]] = None,
+        debug: bool = False,
+    ):
+        """
+        Initialize the OfferProcessor with scraping configuration.
+
+        Args:
+            notion_client: NotionClient instance for database operations
+            selected_scrapers: List of scraper IDs to use (defaults to all)
+            include_filters: Keywords to include in filtering
+            exclude_filters: Keywords to exclude in filtering
+            debug: Enable debug mode
+        """
         FREE_MOBILE_USER_ID = os.getenv("FREE_MOBILE_USER_ID")
         FREE_MOBILE_API_KEY = os.getenv("FREE_MOBILE_API_KEY")
-        assert DATABASE_ID, "DATABASE_ID environment variable is not set."
-        assert NOTION_API, "NOTION_API environment variable is not set."
         assert (
             FREE_MOBILE_USER_ID
         ), "FREE_MOBILE_USER_ID environment variable is not set."
         assert (
             FREE_MOBILE_API_KEY
         ), "FREE_MOBILE_API_KEY environment variable is not set."
+
         self.notion_client = notion_client
         self.sms_client = SMSAPI(FREE_MOBILE_USER_ID, FREE_MOBILE_API_KEY)
-        self.total_offers = len(data)
-        self.offers = data
+        self.selected_scrapers = selected_scrapers or ["1", "2", "3", "4", "5"]
+        self.include_filters = include_filters or []
+        self.exclude_filters = exclude_filters or []
+        self.debug = debug
 
-    def process_offer(self, offer, progress, task):
+        # Will be populated during processing
+        self.scraped_offers: List[JobOffer] = []
+
+    def scrape_offers(self) -> List[JobOffer]:  # noqa: C901
         """
-        Process an offer by verifying its existence in the Notion database, sending an SMS alert,
-        and creating a new page with the offer details in Notion if it is not a duplicate.
+        Scrape job offers from selected sources using the configured parameters.
 
-        Parameters:
-            offer (dict): Contains the job offer details. Expected keys include:
-                - 'Title': The title of the job offer.
-                - 'Source': The source of the offer (e.g., "Business France" or others).
-                - 'Company': The company offering the job (applicable for "Business France").
-                - 'Location': The job location.
-                - 'Contract Type': The type of contract.
-                - 'Job Type' (optional): The job type (used when Source is not "Business France").
-                - 'Job Category' (optional): The job category (used when Source is not "Business France").
-                - 'URL' (optional): A URL associated with the offer.
-                - 'Description' (optional): A description or additional details, which may be clipped to 2000 characters.
-                - Other fields like 'Candidates' or 'Views' (if provided and not 'N/A') are processed as numbers.
-
-            progress: An object for progress tracking, providing:
-                - console.log: For logging status messages.
-                - advance: A method to advance the progress of the current task.
-
-            task: The current task identifier used by the progress tracker.
-
-        Behavior:
-            - Checks if a job with the same title already exists using notion_client.offer_exists.
-              If it does, logs a skipping message and advances the progress.
-            - If the offer is new:
-                 - Constructs an SMS message:
-                     - For "Business France", includes Title, Company, Location, Contract Type, and Source.
-                     - For other sources, includes Title, Job Type, Job Category, Location, Contract Type, and URL.
-                 - Sends the SMS via sms_client.send_sms.
-                 - Pauses briefly with time.sleep(1).
-                 - Builds a dictionary (job_properties) mapping the offer details to the required
-                   Notion page property formats (e.g., title, select, number, url, rich_text).
-                 - Clipping content to 2000 characters for fields like 'Description' or 'Job Type' when necessary.
-                 - Creates a new Notion page with the constructed properties using notion_client.create_page.
+        Returns:
+            List of validated JobOffer instances from the scraping process.
         """
-        title = offer["Title"]
-        source = offer["Source"]
-        company = offer["Company"]
+        all_offers = []
+        scrapers_config = get_scrapers_config()
 
-        if self.notion_client.offer_exists(title=title, source=source, company=company):
-            progress.console.log(
-                f"[yellow]Job '{title}' already exists. Skipping...[/yellow]"
+        if self.debug:
+            print(
+                f"Starting to scrape from {len(self.selected_scrapers)} selected sources"
             )
-            progress.advance(task)
+
+        for scraper_id in self.selected_scrapers:
+            if scraper_id not in scrapers_config:
+                print(
+                    f"Warning: Scraper ID {scraper_id} not found in configuration. Skipping."
+                )
+                continue
+
+            config = scrapers_config[scraper_id]
+            if not config.get("enabled", True):
+                print(f"Scraper {config['name']} is disabled. Skipping.")
+                continue
+
+            try:
+                # Instantiate the appropriate scraper class based on configuration
+                scraper = self._create_scraper(scraper_id, config)
+
+                if self.debug:
+                    print(f"Scraping from {config['name']}...")
+
+                # Scrape offers from this source
+                offers = scraper.scrape()
+
+                if self.debug:
+                    print(f"Found {len(offers)} offers from {config['name']}")
+
+                all_offers.extend(offers)
+
+            except Exception as e:
+                print(f"Error scraping from {config['name']}: {e}")
+                if self.debug:
+                    import traceback
+
+                    traceback.print_exc()
+                continue
+
+        self.scraped_offers = all_offers
+
+        if self.debug:
+            print(f"Total scraped offers: {len(all_offers)}")
+
+        return all_offers
+
+    def _create_scraper(self, scraper_id: str, config: Dict):
+        """
+        Create the appropriate scraper instance based on the scraper ID and configuration.
+
+        Args:
+            scraper_id: The ID of the scraper to create
+            config: The configuration dictionary for this scraper
+
+        Returns:
+            An instance of the appropriate scraper class
+        """
+        # Common parameters for all scrapers
+        scraper_params = {
+            "url": config["url"],
+            "notion_client": self.notion_client,
+            "include_filters": self.include_filters,
+            "exclude_filters": self.exclude_filters,
+            "debug": self.debug,
+            "headless": not self.debug,  # Show browser in debug mode
+        }
+
+        # Create the appropriate scraper based on ID
+        if scraper_id == "1":  # Business France (VIE)
+            return VIEJobScraper(**scraper_params)
+        elif scraper_id == "2":  # Air France
+            return AirFranceJobScraper(**scraper_params)
+        elif scraper_id == "3":  # Apple
+            return AppleJobScraper(**scraper_params)
+        elif scraper_id == "4":  # Welcome to the Jungle (Data Engineer)
+            # Add specific keyword and location for WTTJ scrapers
+            scraper_params["keyword"] = config.get("keyword", "data engineer")
+            scraper_params["location"] = config.get("location", "Île-de-France")
+            return WelcomeToTheJungleJobScraper(**scraper_params)
+        elif scraper_id == "5":  # Welcome to the Jungle (AI)
+            scraper_params["keyword"] = config.get("keyword", "artificial intelligence")
+            scraper_params["location"] = config.get("location", "Île-de-France")
+            return WelcomeToTheJungleJobScraper(**scraper_params)
         else:
-            if offer["Source"] == "Business France":
-                sms_message = (
-                    f"New VIE Job Alert!\n"
-                    f"Title: {offer['Title']}\n"
-                    f"Company: {company}\n"
-                    f"Location: {offer['Location']}\n"
-                    f"Duration: {offer['Duration']}\n"
-                )
-            else:
-                sms_message = (
-                    f"CDI Job Alert!\n"
-                    f"Title: {offer['Title']}\n"
-                    f"Company: {company}\n"
-                    f"Source: {source}\n"
-                    f"Location: {offer['Location']}\n"
-                    f"Contract Type: {offer['Contract Type']}\n"
-                    f"URL: {offer['URL']}\n"
-                )
-            self.sms_client.send_sms(sms_message)
-            time.sleep(10)
+            raise ValueError(f"Unknown scraper ID: {scraper_id}")
 
-            job_properties = {
-                "Title": {
-                    "title": [{"type": "text", "text": {"content": offer["Title"]}}]
-                },
-                "Source": {"select": {"name": offer["Source"]}},
-            }
-
-            for field in offer:
-                if field not in ["Title", "Source"] and offer[field] != "N/A":
-                    if field in ["Candidates", "Views"]:
-                        job_properties[field] = {"number": offer[field]}
-                    elif field == "URL":
-                        job_properties[field] = {"url": offer[field]}
-                    elif field in ["Description", "Job Type"]:
-                        content = offer[field]
-                        if len(content) > 2000:
-                            content = content[:2000]
-                            print(
-                                f"[yellow]Warning: {field} content clipped to 2000 characters.[/yellow]"
-                            )
-                        job_properties[field] = {
-                            "rich_text": [
-                                {"type": "text", "text": {"content": content}}
-                            ]
-                        }
-                    else:
-                        clean_value = offer[field].replace(",", "")
-                        job_properties[field] = {"select": {"name": clean_value}}
-            self.notion_client.create_page(job_properties)
-
-    def process_offers(self):
+    def process_offers(self, offers: Optional[List[JobOffer]] = None) -> None:
         """
-        Processes all job offers, updating a progress bar as each offer is processed.
+        Process job offers by checking existence, sending notifications, and creating Notion pages.
 
-        The method iterates over the list of offers and processes each one using the
-        process_offer method. It uses a Progress context manager to display a progress bar,
-        with the total count reflecting the number of offers to process. Any exception raised
-        during processing is caught and re-raised as a ValueError with an explanatory message.
-
-        Raises:
-            ValueError: If an error occurs during the processing of job offers.
+        Args:
+            offers: Optional list of JobOffer instances to process.
+                   If None, will use scraped_offers from scrape_offers().
         """
+        # Use provided offers or fall back to scraped offers
+        offers_to_process = offers or self.scraped_offers
+
+        if not offers_to_process:
+            print("No offers to process. Run scrape_offers() first or provide offers.")
+            return
+
         try:
+            # Batch check which offers already exist for efficiency
+            print(f"Checking {len(offers_to_process)} offers for duplicates...")
+            existence_result = self.notion_client.offer_exists(offers_to_process)
+
+            # Handle the case where result is either bool or dict
+            if isinstance(existence_result, dict):
+                existence_map = existence_result
+            else:
+                # Single offer case - create a simple map
+                existence_map = (
+                    {offers_to_process[0].offer_id: existence_result}
+                    if offers_to_process
+                    else {}
+                )
+
+            new_offers = [
+                offer
+                for offer in offers_to_process
+                if not existence_map.get(offer.offer_id, False)
+            ]
+            print(f"Found {len(new_offers)} new offers to process")
+
             with Progress() as progress:
                 task = progress.add_task(
-                    "Processing job offers...", total=len(self.offers)
+                    "Processing job offers...", total=len(offers_to_process)
                 )
-                for offer in self.offers:
-                    self.process_offer(offer, progress, task)
+                for offer in offers_to_process:
+                    # Check if offer already exists using pre-computed existence map
+                    if existence_map.get(offer.offer_id, False):
+                        progress.console.log(
+                            f"[yellow]Job '{offer.title}' (ID: {offer.offer_id}) already exists. Skipping...[/yellow]"
+                        )
+                        progress.advance(task)
+                    else:
+                        self._process_new_offer(offer, progress, task)
+
         except Exception as e:
             raise ValueError(f"Error processing job offers: {e}")
+
+    def scrape_and_process(self) -> List[JobOffer]:
+        """
+        Complete workflow: scrape offers from selected sources and process them.
+
+        Returns:
+            List of scraped JobOffer instances.
+        """
+        # Scrape offers
+        scraped = self.scrape_offers()
+
+        # Process the scraped offers
+        if scraped:
+            self.process_offers(scraped)
+
+        return scraped
+
+    def _process_new_offer(self, offer: JobOffer, progress, task):
+        """Process a new offer that doesn't exist in the database."""
+        if offer.source == "Business France":
+            sms_message = (
+                f"New VIE Job Alert!\n"
+                f"Title: {offer.title}\n"
+                f"Company: {offer.company}\n"
+                f"Location: {offer.location}\n"
+                f"Duration: {offer.duration}\n"
+            )
+        else:
+            sms_message = (
+                f"CDI Job Alert!\n"
+                f"Title: {offer.title}\n"
+                f"Company: {offer.company}\n"
+                f"Source: {offer.source}\n"
+                f"Location: {offer.location}\n"
+                f"Contract Type: {offer.contract_type}\n"
+                f"URL: {offer.url}\n"
+            )
+
+        self.sms_client.send_sms(sms_message)
+        time.sleep(10)
+
+        # Use the JobOffer's built-in Notion format conversion
+        result = self.notion_client.create_page_from_job_offer(offer)
+        if result:
+            progress.console.log(
+                f"[green]Created page for '{offer.title}' (ID: {offer.offer_id})[/green]"
+            )
+        else:
+            progress.console.log(
+                f"[red]Failed to create page for '{offer.title}' (ID: {offer.offer_id})[/red]"
+            )
+
+        progress.advance(task)

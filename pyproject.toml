@@ -1,10 +1,10 @@
 [tool.poetry]
 name = "Job scrappers"
-version = "1.4.4"
+version = "2.0.0"
 description = "A package to scrap job offers, send SMS notifications through a free SMS API, and transfer data to a Notion DB."
 authors = ["Marc <128506536+MarcChen@users.noreply.github.com>"]
 packages = [
-    { include = "src" }
+    { include = "services" }
 ]
 
 [tool.poetry.dependencies]

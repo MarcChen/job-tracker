@@ -1,22 +1,34 @@
-FROM selenium/standalone-chromium:132.0
-
-USER root
+# Use official Playwright Python base image
+FROM mcr.microsoft.com/playwright/python:v1.51.0-noble
 
 WORKDIR /app
 
-# RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+# Install Poetry
+RUN pip install --no-cache-dir poetry
 
-RUN curl -sSL https://install.python-poetry.org | python3 - && \
-    mv ~/.local/bin/poetry /usr/local/bin/poetry
+# Copy application code first (needed for Poetry to find the services package)
+COPY . .
 
-COPY pyproject.toml /app/
+# Configure Poetry: Don't create virtual env since we're in container
+RUN poetry config virtualenvs.create false
 
-COPY src/ /app/src/
+# Install dependencies using Poetry
+RUN poetry install --without dev --no-interaction --no-ansi && playwright install --with-deps chromium
 
-COPY main.py /app/
+# Set up non-root user for security with playwright requirements
+RUN groupadd -r pptruser && useradd -r -g pptruser -G audio,video pptruser \
+  && mkdir -p /home/pptruser/Downloads \
+  && chown -R pptruser:pptruser /home/pptruser \
+  && chown -R pptruser:pptruser /app
 
-RUN poetry install --only main
+# Run as non-root user
+USER pptruser
 
-USER seluser
+# Add seccomp security profile for Chrome
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
-CMD ["poetry", "run", "python", "/app/main.py"]
+# set the entrypoint to include the flag
+ENTRYPOINT ["poetry", "run", "python", "main.py", "--scrappers"]
+# default value (can be overridden)
+CMD ["1"]
