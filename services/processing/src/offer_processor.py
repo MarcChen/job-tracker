@@ -4,8 +4,8 @@ from typing import Any, Dict
 
 from rich.progress import Progress
 
-from src.notion_integration import NotionClient
-from src.sms_alert import SMSAPI
+from services.notifications.sms_alert import SMSAPI
+from services.storage.src.notion_integration import NotionClient
 
 
 class OfferProcessor:

@@ -10,6 +10,8 @@ packages = [
 [tool.poetry.dependencies]
 python = "^3.10"
 selenium = "4.9.1"
+playwright = "^1.48.0"
+pydantic = "^2.10.0"
 beautifulsoup4 = "4.12.2"
 lxml = "4.9.3"
 requests = "2.31.0"

@@ -2,12 +2,11 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
-
-from src.job_scrapers.airfrance import AirFranceJobScraper
-from src.job_scrapers.apple import AppleJobScraper
-from src.job_scrapers.vie import VIEJobScraper
-from src.job_scrapers.welcome_to_the_jungle import WelcomeToTheJungleJobScraper
-from src.notion_integration import NotionClient
+from services.databases.src.notion_integration import NotionClient
+from services.job_scrapers.airfrance import AirFranceJobScraper
+from services.job_scrapers.apple import AppleJobScraper
+from services.job_scrapers.vie import VIEJobScraper
+from services.job_scrapers.welcome_to_the_jungle import WelcomeToTheJungleJobScraper
 
 
 def scrape_all_offers(
