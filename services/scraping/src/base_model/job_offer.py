@@ -2,11 +2,44 @@
 Pydantic models for job offers with validation and serialization.
 """
 
+import hashlib
 from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+
+def generate_job_offer_id(company: str, title: str, url: str) -> str:
+    """
+    Generate a unique 5-digit ID for a job offer based on company, title, and URL.
+
+    Args:
+        company: Company name
+        title: Job title
+        url: Job posting URL
+
+    Returns:
+        5-digit string ID
+    """
+    # Normalize inputs by stripping whitespace and converting to lowercase
+    normalized_company = company.strip().lower()
+    normalized_title = title.strip().lower()
+    normalized_url = url.strip().lower()
+
+    # Create a combined string for hashing
+    combined_string = f"{normalized_company}|{normalized_title}|{normalized_url}"
+
+    # Generate SHA256 hash
+    hash_object = hashlib.sha256(combined_string.encode("utf-8"))
+    hash_hex = hash_object.hexdigest()
+
+    # Convert first 20 bits (5 hex chars) to integer and then to 5-digit string
+    # This ensures we get exactly 5 digits with leading zeros if necessary
+    hash_int = int(hash_hex[:5], 16)
+    offer_id = f"{hash_int % 100000:05d}"
+
+    return offer_id
 
 
 class JobSource(str, Enum):
@@ -76,6 +109,11 @@ class JobOffer(BaseModel):
         default_factory=datetime.now, description="Timestamp when the job was scraped"
     )
 
+    # Auto-generated ID field
+    offer_id: str = Field(
+        default="", max_length=5, description="Auto-generated 5-digit unique identifier"
+    )
+
     # Optional fields
     contract_type: Optional[ContractType] = Field(
         default=None, description="Type of employment contract"
@@ -119,6 +157,29 @@ class JobOffer(BaseModel):
             raise ValueError('Field cannot be "N/A"')
         return v
 
+    @model_validator(mode="after")
+    def generate_offer_id(self) -> "JobOffer":
+        """Auto-generate offer_id if not provided and validate it's 5 digits."""
+        if not self.offer_id:
+            self.offer_id = generate_job_offer_id(self.company, self.title, self.url)
+
+        # Validate the offer_id is exactly 5 digits
+        if len(self.offer_id) != 5 or not self.offer_id.isdigit():
+            raise ValueError("offer_id must be exactly 5 digits")
+
+        return self
+
+    def regenerate_id(self) -> str:
+        """
+        Regenerate the offer ID based on current company, title, and URL.
+
+        Returns:
+            The newly generated 5-digit ID
+        """
+        new_id = generate_job_offer_id(self.company, self.title, self.url)
+        self.offer_id = new_id
+        return new_id
+
     def to_notion_format(self) -> Dict[str, Any]:
         """
         Convert the job offer to Notion page properties format.
@@ -130,8 +191,9 @@ class JobOffer(BaseModel):
             "Title": {"title": [{"text": {"content": self.title}}]},
             "Company": {"select": {"name": self.company}},
             "Location": {"select": {"name": self.location}},
-            "Source": {"select": {"name": self.source.value}},
+            "Source": {"select": {"name": self.source}},
             "URL": {"url": self.url},
+            "Offer ID": {"rich_text": [{"text": {"content": self.offer_id}}]},
             "Contract Type": {
                 "select": {
                     "name": self.contract_type.value if self.contract_type else "N/A"
@@ -167,8 +229,9 @@ class JobOffer(BaseModel):
             "Title": self.title,
             "Company": self.company,
             "Location": self.location,
-            "Source": self.source.value,
+            "Source": self.source,
             "URL": self.url,
+            "Offer ID": self.offer_id,
             "Contract Type": self.contract_type.value if self.contract_type else "N/A",
             "Salary": self.salary or "N/A",
             "Duration": self.duration or "N/A",
@@ -198,6 +261,9 @@ class JobOfferInput(BaseModel):
     reference: Optional[str] = None
     schedule_type: Optional[str] = None
     job_content_description: Optional[str] = None
+    offer_id: Optional[str] = (
+        None  # Optional since it will be auto-generated if not provided
+    )
 
     @field_validator("source")
     @classmethod
@@ -255,6 +321,7 @@ class JobOfferInput(BaseModel):
             source=JobSource(self.source),
             url=self.url,
             scraped_at=self.scraped_at,
+            offer_id=self.offer_id or "",  # Will be auto-generated if empty
             contract_type=contract_type,
             salary=self.salary if self.salary != "N/A" else None,
             duration=self.duration if self.duration != "N/A" else None,
