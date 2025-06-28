@@ -1,4 +1,4 @@
-# VIE-Tracker
+# job-tracker
 
 A project in construction for tracking job offers and various activities, leveraging web scraping and integration with Notion for seamless data management.
 
@@ -10,7 +10,7 @@ A project in construction for tracking job offers and various activities, levera
 
 ### What Does This Project Do?
 
-**VIE-Tracker** automates the process of tracking job offers on a specific platform and integrates the data into a Notion database. It uses Selenium for scraping and has a robust Python backend built on top of the Selenium standalone Docker image. Key features include:
+**job-tracker** automates the process of tracking job offers on a specific platform and integrates the data into a Notion database. It uses Selenium for scraping and has a robust Python backend built on top of the Selenium standalone Docker image. Key features include:
 
 1. **Automated Job Scraping:**
    - Dynamically loads and extracts job offers from the website.
@@ -83,18 +83,18 @@ The database contains the following fields:
 
 1. **Clone the Repository:**
    ```bash
-   git clone https://github.com/your-username/vie-tracker.git
-   cd vie-tracker
+   git clone https://github.com/your-username/job-tracker.git
+   cd job-tracker
    ```
 
 2. **Build the Docker Image:**
    ```bash
-   docker build -t vie-tracker .
+   docker build -t job-tracker .
    ```
 
 3. **Run the Application:**
    ```bash
-   docker run --rm -it vie-tracker
+   docker run --rm -it job-tracker
    ```
 
 4. **Configure Environment Variables:**
