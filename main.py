@@ -1,8 +1,9 @@
 import argparse
+import logging
 import os
 from typing import Dict, List
 
-from rich.console import Console
+from rich.logging import RichHandler
 
 from services.processing.src.offer_processor import OfferProcessor
 from services.scraping.src.config import get_default_filters, get_scrapers_config
@@ -102,6 +103,15 @@ Examples:
     )
 
     parser.add_argument(
+        "--verbosity",
+        "-v",
+        type=str,
+        choices=["debug", "info", "warning"],
+        default="info",
+        help="Set the logging verbosity level (default: info)",
+    )
+
+    parser.add_argument(
         "--include",
         type=str,
         nargs="+",
@@ -123,18 +133,38 @@ Examples:
 
 
 if __name__ == "__main__":  # noqa: C901
-    console = Console()
-
     # Parse command line arguments
     parser = create_parser()
     args = parser.parse_args()
+
+    # Configure logging
+    FORMAT = "%(message)s"
+
+    # Determine log level based on verbosity and debug flags
+    if args.debug:
+        log_level = logging.DEBUG
+    else:
+        log_level_map = {
+            "debug": logging.DEBUG,
+            "info": logging.INFO,
+            "warning": logging.WARNING,
+        }
+        log_level = log_level_map[args.verbosity]
+
+    logging.basicConfig(
+        level=log_level, format=FORMAT, datefmt="[%X]", handlers=[RichHandler()]
+    )
+
+    logger = logging.getLogger("vie-tracker")
 
     # Get scrapers configuration
     scrapers_config = get_scrapers_config()
 
     # Handle list-scrapers option
     if args.list_scrapers:
-        console.print("\n[bold blue]Available Scrapers:[/bold blue]")
+        logger.info(
+            "[bold blue]Available Scrapers:[/bold blue]", extra={"markup": True}
+        )
         for sid, config in scrapers_config.items():
             status = (
                 "[green]enabled[/green]"
@@ -146,13 +176,17 @@ if __name__ == "__main__":  # noqa: C901
                 extra_info += f" (keyword: {config['keyword']})"
             if "location" in config:
                 extra_info += f" (location: {config['location']})"
-            console.print(f"  {sid}: [bold]{config['name']}[/bold] - {status}")
-            console.print(f"      {config['description']}{extra_info}")
+            logger.info(
+                f"  {sid}: [bold]{config['name']}[/bold] - {status}",
+                extra={"markup": True},
+            )
+            logger.info(f"      {config['description']}{extra_info}")
         exit(0)
 
     # Welcome message
-    console.print(
-        "\n[bold magenta]🚀 VIE Job Tracker - Enhanced Edition[/bold magenta]"
+    logger.info(
+        "[bold magenta]🚀 VIE Job Tracker - Enhanced Edition[/bold magenta]",
+        extra={"markup": True},
     )
 
     # Check environment variables
@@ -160,8 +194,9 @@ if __name__ == "__main__":  # noqa: C901
     NOTION_API = os.getenv("NOTION_API")
 
     if not DATABASE_ID or not NOTION_API:
-        console.print(
-            "[red]❌ Error: DATABASE_ID and NOTION_API environment variables are required.[/red]"
+        logger.error(
+            "[red]❌ Error: DATABASE_ID and NOTION_API environment variables are required.[/red]",
+            extra={"markup": True},
         )
         exit(1)
 
@@ -174,19 +209,22 @@ if __name__ == "__main__":  # noqa: C901
 
         if args.include:
             include_filters.extend(args.include)
-            console.print(
-                f"[green]Added custom include filters:[/green] {', '.join(args.include)}"
+            logger.info(
+                f"[green]Added custom include filters:[/green] {', '.join(args.include)}",
+                extra={"markup": True},
             )
 
         if args.exclude:
             exclude_filters.extend(args.exclude)
-            console.print(
-                f"[red]Added custom exclude filters:[/red] {', '.join(args.exclude)}"
+            logger.info(
+                f"[red]Added custom exclude filters:[/red] {', '.join(args.exclude)}",
+                extra={"markup": True},
             )
 
         # Display configuration
-        console.print(
-            f"\n[green]Selected scrapers ({len(selected_scraper_ids)}):[/green]"
+        logger.info(
+            f"[green]Selected scrapers ({len(selected_scraper_ids)}):[/green]",
+            extra={"markup": True},
         )
         for sid in selected_scraper_ids:
             scraper_config = scrapers_config[sid]
@@ -201,23 +239,33 @@ if __name__ == "__main__":  # noqa: C901
             if len(url_display) > 60:
                 url_display = url_display[:57] + "..."
 
-            console.print(f"  • [bold]{scraper_config['name']}[/bold]{extra_info}")
-            console.print(f"    [dim]URL: {url_display}[/dim]")
+            logger.info(
+                f"  • [bold]{scraper_config['name']}[/bold]{extra_info}",
+                extra={"markup": True},
+            )
+            logger.info(f"    [dim]URL: {url_display}[/dim]", extra={"markup": True})
 
-        console.print(
-            f"\n[green]Include filters:[/green] {len(include_filters)} keywords"
+        logger.info(
+            f"[green]Include filters:[/green] {len(include_filters)} keywords",
+            extra={"markup": True},
         )
         if args.debug and include_filters:
-            console.print(f"  {', '.join(include_filters)}")
-        console.print(f"[red]Exclude filters:[/red] {len(exclude_filters)} keywords")
+            logger.debug(f"  {', '.join(include_filters)}")
+        logger.info(
+            f"[red]Exclude filters:[/red] {len(exclude_filters)} keywords",
+            extra={"markup": True},
+        )
         if args.debug and exclude_filters:
-            console.print(f"  {', '.join(exclude_filters)}")
-        console.print(
-            f"[yellow]Debug mode:[/yellow] {'Enabled' if args.debug else 'Disabled'}"
+            logger.debug(f"  {', '.join(exclude_filters)}")
+        logger.info(
+            f"[yellow]Debug mode:[/yellow] {'Enabled' if args.debug else 'Disabled'}",
+            extra={"markup": True},
         )
 
         # Initialize clients and processor
-        console.print("\n[bold blue]🔧 Initializing services...[/bold blue]")
+        logger.info(
+            "[bold blue]🔧 Initializing services...[/bold blue]", extra={"markup": True}
+        )
         notion_client = NotionClient(NOTION_API, DATABASE_ID)
 
         processor = OfferProcessor(
@@ -228,28 +276,36 @@ if __name__ == "__main__":  # noqa: C901
             debug=args.debug,
         )
 
-        console.print(
-            "\n[bold blue]🕷️ Starting scraping and processing workflow...[/bold blue]"
+        logger.info(
+            "[bold blue]🕷️ Starting scraping and processing workflow...[/bold blue]",
+            extra={"markup": True},
         )
 
         # Run the complete workflow
         scraped_offers = processor.scrape_and_process()
 
         if scraped_offers:
-            console.print(
-                "\n[bold green]🎉 Workflow completed successfully![/bold green]"
+            logger.info(
+                "[bold green]🎉 Workflow completed successfully![/bold green]",
+                extra={"markup": True},
             )
-            console.print(
-                f"[green]✅ Scraped and processed {len(scraped_offers)} total offers[/green]"
+            logger.info(
+                f"[green]✅ Scraped and processed {len(scraped_offers)} total offers[/green]",
+                extra={"markup": True},
             )
         else:
-            console.print("\n[yellow]⚠️ No offers found during scraping.[/yellow]")
+            logger.warning(
+                "[yellow]⚠️ No offers found during scraping.[/yellow]",
+                extra={"markup": True},
+            )
 
     except ValueError as e:
-        console.print(f"\n[red]❌ Configuration error: {e}[/red]")
+        logger.error(f"[red]❌ Configuration error: {e}[/red]", extra={"markup": True})
         exit(1)
     except Exception as e:
-        console.print(f"\n[red]❌ Error during workflow: {e}[/red]")
+        logger.error(
+            f"[red]❌ Error during workflow: {e}[/red]", extra={"markup": True}
+        )
         if args.debug:
             import traceback
 

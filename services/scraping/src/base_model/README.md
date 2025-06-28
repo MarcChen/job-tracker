@@ -2,7 +2,7 @@
 
 ## Overview
 
-The JobOffer model system provides a clean, validated way to handle job offer data in the VIE-Tracker application. Built with Pydantic, it ensures data consistency and provides seamless integration with Notion and other external systems.
+The JobOffer model system provides a clean, validated way to handle job offer data in the job-tracker application. Built with Pydantic, it ensures data consistency and provides seamless integration with Notion and other external systems.
 
 ## Key Features
 

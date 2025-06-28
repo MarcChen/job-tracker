@@ -1,3 +1,4 @@
+import logging
 from typing import Dict, List, Optional, Union
 
 from notion_client import Client
@@ -24,6 +25,7 @@ class NotionClient:
 
         self.database_id = database_id
         self.client = Client(auth=notion_api_key)
+        self.logger = logging.getLogger("job-tracker.notion-client")
 
     def offer_exists(
         self, job_offers: Union[JobOffer, List[JobOffer]]
@@ -67,7 +69,7 @@ class NotionClient:
             response = self.client.databases.query(**query)
             return len(response.get("results", [])) > 0
         except Exception as e:
-            print(f"Error checking if offer {offer_id} exists: {e}")
+            self.logger.error(f"Error checking if offer {offer_id} exists: {e}")
             return False
 
     def _check_multiple_offers_exist(self, offer_ids: List[str]) -> Dict[str, bool]:
@@ -120,7 +122,7 @@ class NotionClient:
                 result[offer_id] = offer_id in existing_ids
 
         except Exception as e:
-            print(f"Error checking multiple offers existence: {e}")
+            self.logger.error(f"Error checking multiple offers existence: {e}")
 
         return result
 
@@ -140,12 +142,12 @@ class NotionClient:
         """
         title = self._extract_title(properties)
         if not title:
-            print("Error: Title property is required to create a page.")
+            self.logger.error("Error: Title property is required to create a page.")
             return None
 
         # Check if offer exists only if JobOffer is provided
         if job_offer and self.offer_exists(job_offer):
-            print(
+            self.logger.info(
                 f"Offer with ID '{job_offer.offer_id}' already exists. Skipping creation."
             )
             return None
@@ -156,11 +158,11 @@ class NotionClient:
         }
         try:
             result = self.client.pages.create(**payload)
-            print(f"Page '{title}' created successfully!")
+            self.logger.info(f"Page '{title}' created successfully!")
             return result
         except Exception as e:
-            print(f"Error creating page '{title}': {e}")
-            print(f"Payload: {payload}")
+            self.logger.error(f"Error creating page '{title}': {e}")
+            self.logger.debug(f"Payload: {payload}")
             return None
 
     def create_page_from_job_offer(self, job_offer: JobOffer) -> Optional[Dict]:
@@ -201,7 +203,7 @@ class NotionClient:
             if isinstance(existence_result, dict) and existence_result.get(
                 job_offer.offer_id, False
             ):
-                print(
+                self.logger.info(
                     f"Offer with ID '{job_offer.offer_id}' already exists. Skipping creation."
                 )
                 results.append(None)
@@ -326,9 +328,9 @@ class NotionClient:
             page_id = dup.get("id")
             try:
                 self.client.pages.update(page_id, archived=True)
-                print(f"Deleted duplicate page {page_id}")
+                self.logger.info(f"Deleted duplicate page {page_id}")
             except Exception as e:
-                print(f"Error deleting page {page_id}: {e}")
+                self.logger.error(f"Error deleting page {page_id}: {e}")
 
 
 if __name__ == "__main__":

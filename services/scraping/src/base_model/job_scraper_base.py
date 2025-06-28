@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import random
 import warnings
 from typing import List, Optional
@@ -52,6 +53,7 @@ class JobScraperBase:
         self.headless = headless
         self.slow_mo = slow_mo
         self.notion_client = notion_client
+        self.logger = logging.getLogger("job-tracker.base-scraper")
 
         # Internal state
         self._playwright = None
@@ -136,7 +138,7 @@ class JobScraperBase:
         if active_include_filters and not any(
             keyword.lower() in job_title.lower() for keyword in active_include_filters
         ):
-            print(
+            self.logger.debug(
                 f"Skipping offer '{job_title}' (doesn't match include filters: {active_include_filters})..."
             )
             return True
@@ -145,7 +147,7 @@ class JobScraperBase:
         if active_exclude_filters and any(
             keyword.lower() in job_title.lower() for keyword in active_exclude_filters
         ):
-            print(
+            self.logger.debug(
                 f"Skipping offer '{job_title}' (matches exclude filters: {active_exclude_filters})..."
             )
             return True
@@ -166,7 +168,7 @@ class JobScraperBase:
         """
         if not self._offers_urls:
             if self.debug:
-                print("No offers to filter - _offers_urls is empty")
+                self.logger.debug("No offers to filter - _offers_urls is empty")
             return
 
         # Extract all IDs from the offers_urls list, filtering out None values
@@ -178,11 +180,13 @@ class JobScraperBase:
 
         if not offer_ids:
             if self.debug:
-                print("No valid offer IDs found in _offers_urls")
+                self.logger.debug("No valid offer IDs found in _offers_urls")
             return
 
         if self.debug:
-            print(f"Checking {len(offer_ids)} offers against Notion database...")
+            self.logger.debug(
+                f"Checking {len(offer_ids)} offers against Notion database..."
+            )
 
         # Use NotionClient's batch checking method
         existence_results = notion_client._check_multiple_offers_exist(offer_ids)
@@ -204,7 +208,7 @@ class JobScraperBase:
 
         filtered_count = initial_count - len(self._offers_urls)
         if self.debug or filtered_count > 0:
-            print(
+            self.logger.info(
                 f"Filtered out {filtered_count} existing offers. {len(self._offers_urls)} offers remaining."
             )
 
@@ -223,7 +227,7 @@ class JobScraperBase:
         except Exception as e:
             warnings.warn(f"Failed to convert offer input to JobOffer: {e}")
             if self.debug:
-                print(f"Problematic offer input: {offer_input}")
+                self.logger.debug(f"Problematic offer input: {offer_input}")
             return None
 
     # Utility methods for common Playwright operations
@@ -252,7 +256,7 @@ class JobScraperBase:
                 return True
         except Exception as e:
             if self.debug:
-                print(f"Failed to click {locator}: {e}")
+                self.logger.debug(f"Failed to click {locator}: {e}")
         return False
 
     async def _safe_get_text(
@@ -296,7 +300,7 @@ class JobScraperBase:
                         return default
         except Exception as e:
             if self.debug:
-                print(f"Failed to get text from selector {selector}: {e}")
+                self.logger.debug(f"Failed to get text from selector {selector}: {e}")
         return default
 
     async def _safe_get_locator_text(
@@ -318,7 +322,7 @@ class JobScraperBase:
                 return text.strip() if text else default
         except Exception as e:
             if self.debug:
-                print(f"Failed to get text from locator: {e}")
+                self.logger.debug(f"Failed to get text from locator: {e}")
         return default
 
     async def _safe_get_attribute(
@@ -343,7 +347,7 @@ class JobScraperBase:
                     return attr_value if attr_value is not None else default
         except Exception as e:
             if self.debug:
-                print(
+                self.logger.debug(
                     f"Failed to get attribute {attribute} from selector {selector}: {e}"
                 )
         return default
@@ -384,10 +388,9 @@ class JobScraperBase:
                 if job_offer:
                     validated_offers.append(job_offer)
 
-            if self.debug:
-                print(
-                    f"Scraped {len(validated_offers)} valid offers out of {len(raw_offers)} total"
-                )
+            self.logger.info(
+                f"Scraped {len(validated_offers)} valid offers out of {len(raw_offers)} total"
+            )
 
             return validated_offers
         finally:

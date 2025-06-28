@@ -1,3 +1,4 @@
+import logging
 import warnings
 from datetime import datetime
 from typing import List, Optional
@@ -41,6 +42,7 @@ class AirFranceJobScraper(JobScraperBase):
         self._offers_urls = []
         self.total_offers = 0
         self.notion_client = notion_client
+        self.logger = logging.getLogger("job-tracker.airfrance-scraper")
 
     async def extract_all_offers_url(self) -> None:  # noqa: C901
         """
@@ -65,7 +67,7 @@ class AirFranceJobScraper(JobScraperBase):
 
             # Apply keyword filter
             if self.keyword == "":
-                print("No keyword provided. Skipping keyword filtering.")
+                self.logger.warning("No keyword provided. Skipping keyword filtering.")
             else:
                 try:
                     # Wait for the keyword input to be available
@@ -90,14 +92,16 @@ class AirFranceJobScraper(JobScraperBase):
                         """
                     )
 
-                    print(f"Applied keyword filter: {self.keyword}")
+                    self.logger.info(f"Applied keyword filter: {self.keyword}")
                     await self.wait_random(1, 2)
 
                 except Exception as e:
-                    print(f"Could not apply keyword filter: {e}")
+                    self.logger.warning(f"Could not apply keyword filter: {e}")
 
             if self.contract_type == "":
-                print("No contract type provided. Skipping contract type filtering.")
+                self.logger.warning(
+                    "No contract type provided. Skipping contract type filtering."
+                )
             else:
                 try:
                     # Use JavaScript to set the contract type value, similar to the keyword filter
@@ -112,7 +116,7 @@ class AirFranceJobScraper(JobScraperBase):
                         """
                     )
                 except Exception as e:
-                    print(f"Could not apply contract type filter: {e}")
+                    self.logger.warning(f"Could not apply contract type filter: {e}")
 
             # Submit search
             try:
@@ -121,9 +125,9 @@ class AirFranceJobScraper(JobScraperBase):
                 )
                 await search_btn.click()
                 await self.wait_random(2, 4)
-                print("Offers Filtered.")
+                self.logger.info("Offers Filtered.")
             except Exception as e:
-                print(f"Could not submit search: {e}")
+                self.logger.warning(f"Could not submit search: {e}")
 
             # Get total offers count
             try:
@@ -134,11 +138,11 @@ class AirFranceJobScraper(JobScraperBase):
                 count_text = await count_element.text_content()
                 if count_text:
                     self.total_offers = int(count_text.split()[0])
-                    print(f"Total offers found: {self.total_offers}")
+                    self.logger.info(f"Total offers found: {self.total_offers}")
                 else:
                     self.total_offers = 0
             except Exception as e:
-                print(f"Could not determine total offers: {e}")
+                self.logger.warning(f"Could not determine total offers: {e}")
                 self.total_offers = 0
 
             # Navigate through pages and collect offer URLs
@@ -181,9 +185,9 @@ class AirFranceJobScraper(JobScraperBase):
                                 )
 
                         except Exception as e:
-                            print(f"Error extracting offer {i}: {e}")
+                            self.logger.debug(f"Error extracting offer {i}: {e}")
 
-                    print(f"{offer_count} offers loaded")
+                    self.logger.debug(f"{offer_count} offers loaded")
 
                     # Try to navigate to next page
                     try:
@@ -201,21 +205,25 @@ class AirFranceJobScraper(JobScraperBase):
                                 ".ts-offer-list-item"
                             ).first.wait_for(timeout=10000)
                         else:
-                            print("Reached last page or next button not available")
+                            self.logger.info(
+                                "Reached last page or next button not available"
+                            )
                             break
                     except Exception:
-                        print("Reached last page or could not find next button")
+                        self.logger.info(
+                            "Reached last page or could not find next button"
+                        )
                         break
 
                 except Exception as e:
-                    print(f"Error loading offers: {e}")
+                    self.logger.error(f"Error loading offers: {e}")
                     break
 
         except Exception as e:
             raise ValueError(f"Error loading offers: {str(e)}")
 
-        print("Finished loading all available offers.")
-        print(f"Total after filters : {len(self._offers_urls)}")
+        self.logger.info("Finished loading all available offers.")
+        self.logger.info(f"Total after filters : {len(self._offers_urls)}")
 
     async def parse_offers(self) -> List[JobOfferInput]:  # noqa: C901
         """
@@ -320,7 +328,9 @@ class AirFranceJobScraper(JobScraperBase):
 
                 offers.append(offer_input)
                 if self.debug:
-                    print(f"Air France offer extracted: {title} at {company}")
+                    self.logger.debug(
+                        f"Air France offer extracted: {title} at {company}"
+                    )
 
             except Exception as e:
                 warnings.warn(f"Error extracting data for offer {offer['url']}: {e}")
@@ -347,4 +357,4 @@ if __name__ == "__main__":
         notion_client=notion_client,
     )
     offers = scraper.scrape()
-    print(offers)
+    scraper.logger.info(offers)

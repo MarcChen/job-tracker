@@ -1,3 +1,4 @@
+import logging
 import warnings
 from datetime import datetime
 from typing import List, Optional
@@ -32,6 +33,7 @@ class VIEJobScraper(JobScraperBase):
             headless=headless,
         )
         self._offers_urls = []
+        self.logger = logging.getLogger("job-tracker.vie-scraper")
 
     async def extract_all_offers_url(self) -> None:
         """
@@ -66,17 +68,17 @@ class VIEJobScraper(JobScraperBase):
                 current_count = await offer_elements.count()
 
                 if current_count == previous_count:
-                    print("No new offers detected. Assuming all offers are loaded.")
+                    self.logger.info(
+                        "No new offers detected. Assuming all offers are loaded."
+                    )
                     break
                 else:
                     previous_count = current_count
-                    print(f"Loaded {current_count} offers so far.")
-
+                    self.logger.info(f"Loaded {current_count} offers so far.")
             except Exception as e:
-                print(f"Reached last offer or button not found: {e}")
+                self.logger.info(f"Reached last offer or button not found: {e}")
                 break
-
-        print("Finished loading all available offers.")
+        self.logger.info("Finished loading all available offers.")
 
     async def parse_offers(self) -> List[JobOfferInput]:
         """
@@ -139,12 +141,8 @@ class VIEJobScraper(JobScraperBase):
                 )
 
                 offers.append(offer_input)
-                (
-                    print(f"VIE offer extracted: {title} at {company}")
-                    if self.debug
-                    else None
-                )
-
+                if self.debug:
+                    self.logger.debug(f"VIE offer extracted: {title} at {company}")
             except Exception as e:
                 warnings.warn(f"Error extracting data for offer {i}: {e}")
 
@@ -168,5 +166,7 @@ if __name__ == "__main__":
         headless=False,  # Set to True for production
     )
     job_offers = scraper.scrape()
-    print(f"Scraped {len(job_offers)} job offers.")
-    print(job_offers)
+    logging.getLogger("job-tracker.vie-scraper").info(
+        f"Scraped {len(job_offers)} job offers."
+    )
+    logging.getLogger("job-tracker.vie-scraper").info(job_offers)

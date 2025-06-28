@@ -1,3 +1,4 @@
+import logging
 import warnings
 from datetime import datetime
 from typing import List, Optional
@@ -37,6 +38,7 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
         )
         self.keyword = keyword
         self.location = location
+        self.logger = logging.getLogger("job-tracker.wttj-scraper")
 
     async def extract_all_offers_url(self) -> None:  # noqa: C901
         """
@@ -66,7 +68,7 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
                 await location_input.press("Enter")
                 await self.wait_random(1, 2)
             except Exception as e:
-                print(f"Could not apply location filter: {e}")
+                self.logger.warning(f"Could not apply location filter: {e}")
 
         # Apply keyword filter
         if self.keyword:
@@ -77,7 +79,7 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
                 await search_input.press("Enter")
                 await self.wait_random(1, 2)
             except Exception as e:
-                print(f"Could not apply keyword filter: {e}")
+                self.logger.warning(f"Could not apply keyword filter: {e}")
 
         # Get total offers count
         try:
@@ -88,11 +90,11 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
             count_text = await count_element.text_content()
             if count_text:
                 total_offers = int(count_text.strip())
-                print(f"Total offers found: {total_offers}")
+                self.logger.info(f"Total offers found: {total_offers}")
             else:
                 total_offers = 0
         except Exception as e:
-            print(f"Could not determine total offers: {e}")
+            self.logger.warning(f"Could not determine total offers: {e}")
             total_offers = 0
 
         loaded_offers = 0
@@ -145,14 +147,14 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
                                             ),
                                         }
                                     )
-                                    print(
+                                    self.logger.debug(
                                         f"Added offer URL: {href}" if self.debug else ""
                                     )
 
                     except Exception as e:
-                        print(f"Error extracting offer {i}: {e}")
+                        self.logger.debug(f"Error extracting offer {i}: {e}")
 
-                print(f"Loaded {loaded_offers} offers")
+                self.logger.debug(f"Loaded {loaded_offers} offers")
 
                 if loaded_offers >= total_offers:
                     break
@@ -177,23 +179,23 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
                                 await next_button.click()
                                 await self.wait_random(1, 3)
                             else:
-                                print("Reached last page")
+                                self.logger.info("Reached last page")
                                 break
                         else:
-                            print("No pagination items found")
+                            self.logger.info("No pagination items found")
                             break
                     else:
-                        print("No pagination nav found")
+                        self.logger.info("No pagination nav found")
                         break
                 except Exception:
-                    print("Reached last offer or pagination failed")
+                    self.logger.info("Reached last offer or pagination failed")
                     break
 
             except Exception as e:
-                print(f"Error loading offers: {e}")
+                self.logger.error(f"Error loading offers: {e}")
                 break
 
-        print(
+        self.logger.info(
             f"Finished loading all available offers. Total URLs collected: {len(self._offers_urls)}"
         )
 
@@ -348,17 +350,19 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
                 offers.append(offer_input)
 
                 if self.debug:
-                    print("WTTJ offer extracted:")
-                    print(f"  Title: {title}")
-                    print(f"  Company: {company}")
-                    print(f"  Location: {location}")
-                    print(f"  Contract: {contract_type_text} -> {contract_type}")
-                    print(f"  Salary: {salary}")
-                    print(f"  Experience: {experience}")
-                    print(f"  Remote: {remote_work}")
-                    print(f"  URL: {offer['url']}")
+                    self.logger.debug("WTTJ offer extracted:")
+                    self.logger.debug(f"  Title: {title}")
+                    self.logger.debug(f"  Company: {company}")
+                    self.logger.debug(f"  Location: {location}")
+                    self.logger.debug(
+                        f"  Contract: {contract_type_text} -> {contract_type}"
+                    )
+                    self.logger.debug(f"  Salary: {salary}")
+                    self.logger.debug(f"  Experience: {experience}")
+                    self.logger.debug(f"  Remote: {remote_work}")
+                    self.logger.debug(f"  URL: {offer['url']}")
                 else:
-                    print(f"WTTJ offer extracted: {title} at {company}")
+                    self.logger.info(f"WTTJ offer extracted: {title} at {company}")
 
             except Exception as e:
                 warnings.warn(f"Error extracting data for offer {offer['url']}: {e}")

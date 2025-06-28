@@ -1,3 +1,4 @@
+import logging
 import urllib.parse
 
 import requests
@@ -48,6 +49,7 @@ class SMSAPI:
         """
         self.user: str = user
         self.password: str = password
+        self.logger = logging.getLogger("vie-tracker.sms-api")
 
     def send_sms(self, msg: str) -> None:
         """
@@ -74,10 +76,10 @@ class SMSAPI:
         response: requests.Response = requests.get(url)
 
         # Handle the response
-        self._handle_response(response)
+        self._handle_response(response, self.logger)
 
     @staticmethod
-    def _handle_response(response: requests.Response) -> None:
+    def _handle_response(response: requests.Response, logger=None) -> None:
         """
         Handles the HTTP response, raising appropriate exceptions for errors.
 
@@ -98,7 +100,10 @@ class SMSAPI:
         }
 
         if response.status_code == 200:
-            print("SMS sent successfully.")
+            if logger:
+                logger.info("SMS sent successfully.")
+            else:
+                print("SMS sent successfully.")
         elif response.status_code in error_map:
             raise error_map[response.status_code]
         else:

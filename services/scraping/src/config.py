@@ -19,6 +19,8 @@ def get_scrapers_config() -> Dict[str, dict]:
             "description": "Job offers from Air France careers page",
             "enabled": True,
             "category": "CDI",
+            "keyword": "data",
+            "contract_type": "CDI",
         },
         "3": {
             "name": "Apple",

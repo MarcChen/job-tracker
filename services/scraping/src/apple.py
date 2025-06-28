@@ -1,3 +1,4 @@
+import logging
 import re
 import warnings
 from datetime import datetime
@@ -34,6 +35,7 @@ class AppleJobScraper(JobScraperBase):
             headless=headless,
         )
         self._offers_urls = []
+        self.logger = logging.getLogger("job-tracker.apple-scraper")
 
     async def extract_all_offers_url(self) -> None:  # noqa: C901
         """
@@ -57,7 +59,7 @@ class AppleJobScraper(JobScraperBase):
                     await self.wait_random(1, 2)
             except Exception as e:
                 if self.debug:
-                    print(f"Could not handle cookies: {e}")
+                    self.logger.debug(f"Could not handle cookies: {e}")
 
             # Get total offers count
             try:
@@ -68,13 +70,13 @@ class AppleJobScraper(JobScraperBase):
                     match = re.search(r"(\d+)", count_text)
                     if match:
                         total_offers = int(match.group(1))
-                        print(f"Total offers found: {total_offers}")
+                        self.logger.info(f"Total offers found: {total_offers}")
                     else:
                         total_offers = 0
                 else:
                     total_offers = 0
             except Exception as e:
-                print(f"Could not determine total offers: {e}")
+                self.logger.warning(f"Could not determine total offers: {e}")
                 total_offers = 0
 
             # Navigate through pages and collect offer URLs
@@ -126,9 +128,9 @@ class AppleJobScraper(JobScraperBase):
                                     )
 
                         except Exception as e:
-                            print(f"Error extracting offer {i}: {e}")
+                            self.logger.debug(f"Error extracting offer {i}: {e}")
 
-                    print(f"{offer_count} offers loaded from current page")
+                    self.logger.debug(f"{offer_count} offers loaded from current page")
 
                     # Try to navigate to next page
                     try:
@@ -147,21 +149,25 @@ class AppleJobScraper(JobScraperBase):
                                 "li[data-core-accordion-item]"
                             ).first.wait_for(timeout=10000)
                         else:
-                            print("Reached last page or next button not available")
+                            self.logger.debug(
+                                "Reached last page or next button not available"
+                            )
                             break
                     except Exception:
-                        print("Reached last page or could not find next button")
+                        self.logger.debug(
+                            "Reached last page or could not find next button"
+                        )
                         break
 
                 except Exception as e:
-                    print(f"Error loading offers: {e}")
+                    self.logger.error(f"Error loading offers: {e}")
                     break
 
         except Exception as e:
             raise ValueError(f"Error loading offers: {str(e)}")
 
-        print("Finished loading all available offers.")
-        print(f"Total after filters: {len(self._offers_urls)}")
+        self.logger.info("Finished loading all available offers.")
+        self.logger.info(f"Total after filters: {len(self._offers_urls)}")
 
     async def parse_offers(self) -> List[JobOfferInput]:
         """
@@ -221,12 +227,16 @@ class AppleJobScraper(JobScraperBase):
 
                 offers.append(offer_input)
                 if self.debug:
-                    print(f"Apple offer extracted: {title} at Apple ({location})")
+                    self.logger.debug(
+                        f"Apple offer extracted: {title} at Apple ({location})"
+                    )
 
             except Exception as e:
                 warnings.warn(f"Error extracting data for offer {offer['url']}: {e}")
                 if self.debug:
-                    print(f"Failed to extract data from URL: {offer['url']}")
+                    self.logger.debug(
+                        f"Failed to extract data from URL: {offer['url']}"
+                    )
 
         return offers
 
@@ -248,6 +258,7 @@ if __name__ == "__main__":
         headless=False,
     )
     job_offers = scraper.scrape()
-    print(f"Scraped {len(job_offers)} job offers from Apple.")
+    logger = logging.getLogger("job-tracker.apple-scraper")
+    logger.info(f"Scraped {len(job_offers)} job offers from Apple.")
     for offer in job_offers:
-        print(f"- {offer.title} at {offer.company} ({offer.location})")
+        logger.info(f"- {offer.title} at {offer.company} ({offer.location})")

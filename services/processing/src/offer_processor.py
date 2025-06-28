@@ -1,3 +1,4 @@
+import logging
 import os
 import time
 from typing import Dict, List, Optional
@@ -66,6 +67,7 @@ class OfferProcessor:
         self.include_filters = include_filters or []
         self.exclude_filters = exclude_filters or []
         self.debug = debug
+        self.logger = logging.getLogger("job-tracker.offer-processor")
 
         # Will be populated during processing
         self.scraped_offers: List[JobOffer] = []
@@ -81,20 +83,20 @@ class OfferProcessor:
         scrapers_config = get_scrapers_config()
 
         if self.debug:
-            print(
+            self.logger.debug(
                 f"Starting to scrape from {len(self.selected_scrapers)} selected sources"
             )
 
         for scraper_id in self.selected_scrapers:
             if scraper_id not in scrapers_config:
-                print(
+                self.logger.warning(
                     f"Warning: Scraper ID {scraper_id} not found in configuration. Skipping."
                 )
                 continue
 
             config = scrapers_config[scraper_id]
             if not config.get("enabled", True):
-                print(f"Scraper {config['name']} is disabled. Skipping.")
+                self.logger.info(f"Scraper {config['name']} is disabled. Skipping.")
                 continue
 
             try:
@@ -102,18 +104,20 @@ class OfferProcessor:
                 scraper = self._create_scraper(scraper_id, config)
 
                 if self.debug:
-                    print(f"Scraping from {config['name']}...")
+                    self.logger.debug(f"Scraping from {config['name']}...")
 
                 # Scrape offers from this source
                 offers = scraper.scrape()
 
                 if self.debug:
-                    print(f"Found {len(offers)} offers from {config['name']}")
+                    self.logger.debug(
+                        f"Found {len(offers)} offers from {config['name']}"
+                    )
 
                 all_offers.extend(offers)
 
             except Exception as e:
-                print(f"Error scraping from {config['name']}: {e}")
+                self.logger.error(f"Error scraping from {config['name']}: {e}")
                 if self.debug:
                     import traceback
 
@@ -123,7 +127,7 @@ class OfferProcessor:
         self.scraped_offers = all_offers
 
         if self.debug:
-            print(f"Total scraped offers: {len(all_offers)}")
+            self.logger.debug(f"Total scraped offers: {len(all_offers)}")
 
         return all_offers
 
@@ -152,6 +156,8 @@ class OfferProcessor:
         if scraper_id == "1":  # Business France (VIE)
             return VIEJobScraper(**scraper_params)
         elif scraper_id == "2":  # Air France
+            scraper_params["keyword"] = config.get("keyword", "")
+            scraper_params["contract_type"] = config.get("contract_type", "")
             return AirFranceJobScraper(**scraper_params)
         elif scraper_id == "3":  # Apple
             return AppleJobScraper(**scraper_params)
@@ -179,12 +185,16 @@ class OfferProcessor:
         offers_to_process = offers or self.scraped_offers
 
         if not offers_to_process:
-            print("No offers to process. Run scrape_offers() first or provide offers.")
+            self.logger.warning(
+                "No offers to process. Run scrape_offers() first or provide offers."
+            )
             return
 
         try:
             # Batch check which offers already exist for efficiency
-            print(f"Checking {len(offers_to_process)} offers for duplicates...")
+            self.logger.info(
+                f"Checking {len(offers_to_process)} offers for duplicates..."
+            )
             existence_result = self.notion_client.offer_exists(offers_to_process)
 
             # Handle the case where result is either bool or dict
@@ -203,7 +213,7 @@ class OfferProcessor:
                 for offer in offers_to_process
                 if not existence_map.get(offer.offer_id, False)
             ]
-            print(f"Found {len(new_offers)} new offers to process")
+            self.logger.info(f"Found {len(new_offers)} new offers to process")
 
             with Progress() as progress:
                 task = progress.add_task(
