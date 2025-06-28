@@ -29,6 +29,6 @@ ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
 # set the entrypoint to include the flag
-ENTRYPOINT ["poetry", "run", "python", "main.py", "--scrappers"]
+ENTRYPOINT ["python", "main.py", "--scrapers"]
 # default value (can be overridden)
 CMD ["1"]
