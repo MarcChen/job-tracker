@@ -1,4 +1,4 @@
-name: Run Selenium Python App
+name: Run job-tracker App
 
 on:
   workflow_run:
