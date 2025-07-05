@@ -39,4 +39,4 @@ jobs:
                      -e FREE_MOBILE_USER_ID=$FREE_MOBILE_USER_ID \
                      -e FREE_MOBILE_API_KEY=$FREE_MOBILE_API_KEY \
                      --rm \
-                     job-tracker:latest 1,2 \
+                     job-tracker:latest 1,2,3,4 \
