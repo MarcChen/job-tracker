@@ -67,6 +67,7 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
                 await self.wait_random(1, 1.5)
                 await location_input.press("Enter")
                 await self.wait_random(1, 2)
+                self.logger.info(f"applied location filter: {self.location}")
             except Exception as e:
                 await self.save_error_screenshot("wtj-location_filter_error")
                 self.logger.warning(f"Could not apply location filter: {e}")
@@ -79,6 +80,7 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
                 await search_input.fill(self.keyword)
                 await search_input.press("Enter")
                 await self.wait_random(1, 2)
+                self.logger.info(f"applied keyword filter: {self.keyword}")
             except Exception as e:
                 await self.save_error_screenshot("wtj-keyword_filter_error")
                 self.logger.warning(f"Could not apply keyword filter: {e}")

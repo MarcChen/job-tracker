@@ -75,6 +75,7 @@ class NotionClient:
     def _check_multiple_offers_exist(self, offer_ids: List[str]) -> Dict[str, bool]:
         """
         Check if multiple offers exist by querying the database with a filter for all offer IDs.
+        Handles Notion's 100-filter limit by batching requests.
 
         Args:
             offer_ids: List of 5-digit offer IDs to search for.
@@ -83,47 +84,38 @@ class NotionClient:
             Dict mapping offer_id to bool indicating existence.
         """
         result = {offer_id: False for offer_id in offer_ids}
-
         if not offer_ids:
             return result
 
+        BATCH_SIZE = 100
         try:
-            # Build OR filter for all offer IDs
-            if len(offer_ids) == 1:
-                # Single offer ID - use simple filter
-                filter_condition = {
-                    "property": "Offer ID",
-                    "rich_text": {"equals": offer_ids[0]},
-                }
-            else:
-                # Multiple offer IDs - use OR filter
-                filter_condition = {
-                    "or": [
-                        {"property": "Offer ID", "rich_text": {"equals": offer_id}}
-                        for offer_id in offer_ids
-                    ]
-                }
-
-            query = {"database_id": self.database_id, "filter": filter_condition}
-
-            # Get all pages that match any of the offer IDs
-            response = self.client.databases.query(**query)
-
-            # Extract existing offer IDs from results
-            existing_ids = set()
-            for page in response.get("results", []):
-                properties = page.get("properties", {})
-                existing_offer_id = self._extract_offer_id(properties)
-                if existing_offer_id:
-                    existing_ids.add(existing_offer_id)
-
-            # Check which of our offer IDs exist
-            for offer_id in offer_ids:
-                result[offer_id] = offer_id in existing_ids
-
+            for i in range(0, len(offer_ids), BATCH_SIZE):
+                batch = offer_ids[i : i + BATCH_SIZE]
+                if len(batch) == 1:
+                    filter_condition = {
+                        "property": "Offer ID",
+                        "rich_text": {"equals": batch[0]},
+                    }
+                else:
+                    filter_condition = {
+                        "or": [
+                            {"property": "Offer ID", "rich_text": {"equals": offer_id}}
+                            for offer_id in batch
+                        ]
+                    }
+                query = {"database_id": self.database_id, "filter": filter_condition}
+                response = self.client.databases.query(**query)
+                existing_ids = set()
+                for page in response.get("results", []):
+                    properties = page.get("properties", {})
+                    existing_offer_id = self._extract_offer_id(properties)
+                    if existing_offer_id:
+                        existing_ids.add(existing_offer_id)
+                for offer_id in batch:
+                    if offer_id in existing_ids:
+                        result[offer_id] = True
         except Exception as e:
             self.logger.error(f"Error checking multiple offers existence: {e}")
-
         return result
 
     def create_page(
