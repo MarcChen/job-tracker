@@ -96,6 +96,7 @@ class AirFranceJobScraper(JobScraperBase):
                     await self.wait_random(1, 2)
 
                 except Exception as e:
+                    await self.save_error_screenshot("airfrance-keyword-error")
                     self.logger.warning(f"Could not apply keyword filter: {e}")
 
             if self.contract_type == "":
@@ -116,6 +117,7 @@ class AirFranceJobScraper(JobScraperBase):
                         """
                     )
                 except Exception as e:
+                    await self.save_error_screenshot("airfrance-contract-type-error")
                     self.logger.warning(f"Could not apply contract type filter: {e}")
 
             # Submit search
@@ -127,6 +129,7 @@ class AirFranceJobScraper(JobScraperBase):
                 await self.wait_random(2, 4)
                 self.logger.info("Offers Filtered.")
             except Exception as e:
+                await self.save_error_screenshot("airfrance-search-error")
                 self.logger.warning(f"Could not submit search: {e}")
 
             # Get total offers count
@@ -142,6 +145,7 @@ class AirFranceJobScraper(JobScraperBase):
                 else:
                     self.total_offers = 0
             except Exception as e:
+                await self.save_error_screenshot("airfrance-count-error")
                 self.logger.warning(f"Could not determine total offers: {e}")
                 self.total_offers = 0
 
