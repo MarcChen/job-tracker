@@ -55,6 +55,7 @@ class JobSource(str, Enum):
     AIR_FRANCE = "Air France"
     APPLE = "Apple"
     WELCOME_TO_THE_JUNGLE = "Welcome to the Jungle"
+    LINKEDIN = "LinkedIn"
     UNKNOWN = "Unknown"  # For cases where the source is not recognized
 
 
