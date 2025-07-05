@@ -312,3 +312,24 @@ This pull request introduces significant updates to the job tracker project, foc
 
 These updates collectively enhance the project's reliability, maintainability, and usability.
 
+## [2.1.0] - 2025-07-05
+- Merged PR #21 by @MarcChen: feat : Enhance Scraper Resilience and Data Handling: Error Screenshots, Anti-Bot Measures, Field Normalization & Notion API Batching
+This pull request introduces several improvements across multiple components of the codebase, focusing on error handling, scraper enhancements, and data normalization. Key changes include adding screenshot capture for error scenarios, improving scraper anti-bot measures, and optimizing Notion API integration.
+
+### Error Handling Enhancements:
+* Added `save_error_screenshot` calls in various scrapers (`airfrance.py`, `apple.py`, `vie.py`, `welcome_to_the_jungle.py`) to capture screenshots during specific error scenarios, aiding in debugging. [[1]](diffhunk://#diff-d2ec0409797bd6b838cf5d84b02816bf4c1a549dad4355cca7575d0386190836R99) [[2]](diffhunk://#diff-72394ee8541d5492fd440f9ecc4d9d182364540d79fb2cb7f0f8c9f1474fa0ecR63) [[3]](diffhunk://#diff-f1559577ff7736b544602de00cc4b3c4ab547d2fa4abaf5247d1b8c588ed1e9dR80) [[4]](diffhunk://#diff-4c44a5339aa611728faf270908d46effb8a63c1f3c88564378bace2bea3ea089R101)
+* Introduced the `save_error_screenshot` utility method in `job_scraper_base.py` to centralize screenshot handling for errors.
+
+### Scraper Enhancements:
+* Updated `_setup_browser` in `job_scraper_base.py` to include a custom user-agent and headers for better anti-bot evasion. [[1]](diffhunk://#diff-3aded47079c82ee098ab6f1f984f73bb6190af3cf56916dbd1d0a82793433ac2L71-R82) [[2]](diffhunk://#diff-3aded47079c82ee098ab6f1f984f73bb6190af3cf56916dbd1d0a82793433ac2L81-R95)
+* Enhanced logging in `welcome_to_the_jungle.py` to provide more context during the application of filters. [[1]](diffhunk://#diff-4c44a5339aa611728faf270908d46effb8a63c1f3c88564378bace2bea3ea089R70-R72) [[2]](diffhunk://#diff-4c44a5339aa611728faf270908d46effb8a63c1f3c88564378bace2bea3ea089R83-R85)
+
+### Data Normalization:
+* Added a `normalize_fields` validator in `job_offer.py` to standardize company, location, salary, and reference fields by stripping, lowercasing, and collapsing spaces.
+
+### Notion API Optimizations:
+* Modified `_check_multiple_offers_exist` in `notion_integration.py` to handle Notion's 100-filter limit by batching requests, improving scalability.
+
+### Miscellaneous:
+* Truncated job content descriptions to 1950 characters in `job_offer.py` to comply with Notion API limits. [[1]](diffhunk://#diff-7de339d38b61a17bd8ac80032efc4100f9de0001097df74073053a7a49a3d822R233-R237) [[2]](diffhunk://#diff-7de339d38b61a17bd8ac80032efc4100f9de0001097df74073053a7a49a3d822L241-R254)
+
