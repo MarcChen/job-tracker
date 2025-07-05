@@ -77,6 +77,7 @@ class VIEJobScraper(JobScraperBase):
                     self.logger.info(f"Loaded {current_count} offers so far.")
             except Exception as e:
                 self.logger.info(f"Reached last offer or button not found: {e}")
+                await self.save_error_screenshot("vie-offers-error")
                 break
         self.logger.info("Finished loading all available offers.")
 

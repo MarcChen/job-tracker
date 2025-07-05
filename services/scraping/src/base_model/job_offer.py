@@ -179,6 +179,14 @@ class JobOffer(BaseModel):
         cleaned = " ".join(cleaned.split())
         return cleaned
 
+    @field_validator("company", "location", "salary", "reference")
+    @classmethod
+    def normalize_fields(cls, v: str) -> str:
+        """Normalize company and location: strip, lowercase, collapse spaces."""
+        if v is None:
+            return v
+        return " ".join(v.strip().lower().split())
+
     @model_validator(mode="after")
     def generate_offer_id(self) -> "JobOffer":
         """Auto-generate offer_id if not provided and validate it's 5 digits."""
@@ -222,6 +230,11 @@ class JobOffer(BaseModel):
                 ]
             }
 
+        # Truncate Job Content Description to 1950 chars to avoid Notion API limit
+        job_content = self.job_content_description or ""
+        if len(job_content) > 1950:
+            job_content = job_content[:1950] + "..."
+
         return {
             "Title": {"title": [{"text": {"content": self.title}}]},
             "Company": notion_select(self.company),
@@ -238,7 +251,7 @@ class JobOffer(BaseModel):
             "Schedule Type": notion_select(
                 self.schedule_type if self.schedule_type else "N/A"
             ),
-            "Job Content Description": notion_rich_text(self.job_content_description),
+            "Job Content Description": notion_rich_text(job_content),
         }
 
     def to_legacy_dict(self) -> Dict[str, Any]:

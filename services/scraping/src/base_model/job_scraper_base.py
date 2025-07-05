@@ -1,7 +1,9 @@
 import asyncio
 import logging
+import os
 import random
 import warnings
+from datetime import datetime
 from typing import List, Optional
 
 from playwright.async_api import Browser, Locator, Page, async_playwright
@@ -68,7 +70,16 @@ class JobScraperBase:
         return self._page
 
     async def _setup_browser(self) -> None:
-        """Setup Playwright browser, context, and page."""
+        """Setup Playwright browser, context, and page with custom user-agent and headers for anti-bot evasion."""
+        user_agent = (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/114.0.0.0 Safari/537.36"
+        )
+        extra_headers = {
+            "Accept-Language": "en-US,en;q=0.9",
+            # Add more headers if needed
+        }
         if self.browser is None:
             self._playwright = await async_playwright().start()
             self._browser = await self._playwright.chromium.launch(
@@ -78,7 +89,10 @@ class JobScraperBase:
         else:
             self._browser = self.browser
 
-        self._context = await self._browser.new_context()
+        self._context = await self._browser.new_context(
+            user_agent=user_agent,
+            extra_http_headers=extra_headers,
+        )
         self._page = await self._context.new_page()
 
     async def _cleanup_browser(self) -> None:
@@ -94,8 +108,6 @@ class JobScraperBase:
 
     def _init_offer_input(self) -> JobOfferInput:
         """Initialize a JobOfferInput with default values for missing fields."""
-        from datetime import datetime
-
         return JobOfferInput(
             title="",
             company="",
@@ -229,6 +241,18 @@ class JobScraperBase:
             if self.debug:
                 self.logger.debug(f"Problematic offer input: {offer_input}")
             return None
+
+    async def save_error_screenshot(self, func_name: str):
+        """Save a screenshot with the function name and timestamp."""
+        if self._page:
+            timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+            filename = f"error_{func_name}_{timestamp}.png"
+            path = os.path.join("screenshots", filename)
+            os.makedirs("screenshots", exist_ok=True)
+            await self._page.screenshot(path=path)
+            self.logger.info(f"Saved error screenshot: {path}")
+        else:
+            self.logger.warning("No page available for screenshot.")
 
     # Utility methods for common Playwright operations
     async def wait_random(

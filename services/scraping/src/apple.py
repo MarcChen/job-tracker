@@ -60,6 +60,7 @@ class AppleJobScraper(JobScraperBase):
             except Exception as e:
                 if self.debug:
                     self.logger.debug(f"Could not handle cookies: {e}")
+                    await self.save_error_screenshot("apple-cookies-error")
 
             # Get total offers count
             try:
@@ -77,6 +78,7 @@ class AppleJobScraper(JobScraperBase):
                     total_offers = 0
             except Exception as e:
                 self.logger.warning(f"Could not determine total offers: {e}")
+                await self.save_error_screenshot("apple-count-error")
                 total_offers = 0
 
             # Navigate through pages and collect offer URLs
@@ -129,7 +131,7 @@ class AppleJobScraper(JobScraperBase):
 
                         except Exception as e:
                             self.logger.debug(f"Error extracting offer {i}: {e}")
-
+                            await self.save_error_screenshot("apple-offer-error")
                     self.logger.debug(f"{offer_count} offers loaded from current page")
 
                     # Try to navigate to next page
@@ -154,6 +156,7 @@ class AppleJobScraper(JobScraperBase):
                             )
                             break
                     except Exception:
+                        await self.save_error_screenshot("apple-next-button-error")
                         self.logger.debug(
                             "Reached last page or could not find next button"
                         )
