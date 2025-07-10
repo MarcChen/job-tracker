@@ -143,11 +143,15 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
                                         href = (
                                             "https://www.welcometothejungle.com" + href
                                         )
+                                    company_element = offer.locator("span.wui-text")
+                                    company = await company_element.text_content()
+                                    company = company.strip()
+                                    self.logger.debug(f"Company name : {company}")
                                     self._offers_urls.append(
                                         {
                                             "url": pre_process_url(href),
                                             "id": generate_job_offer_id(
-                                                company="Apple",
+                                                company=company.strip(),
                                                 title=job_title.strip(),
                                                 url=pre_process_url(href),
                                             ),
