@@ -42,6 +42,12 @@ def generate_job_offer_id(company: str, title: str, url: Optional[str] = None) -
     return offer_id
 
 
+def pre_process_url(url: str) -> str:
+    if "?" in url:
+        url = url.split("?")[0]
+    return url
+
+
 class JobSource(str, Enum):
     """Enumeration of job sources."""
 
@@ -145,10 +151,12 @@ class JobOffer(BaseModel):
     @field_validator("url")
     @classmethod
     def validate_url(cls, v: str) -> str:
-        """Validate URL format."""
+        """Validate URL format and clean query parameters."""
         if not v.startswith(("http://", "https://")):
             raise ValueError("URL must start with http:// or https://")
-        return v
+
+        # Remove query parameters (everything after ?) to ensure consistent ID generation
+        return pre_process_url(v)
 
     @field_validator("title", "company", "location")
     @classmethod
