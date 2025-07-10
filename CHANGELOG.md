@@ -333,3 +333,17 @@ This pull request introduces several improvements across multiple components of 
 ### Miscellaneous:
 * Truncated job content descriptions to 1950 characters in `job_offer.py` to comply with Notion API limits. [[1]](diffhunk://#diff-7de339d38b61a17bd8ac80032efc4100f9de0001097df74073053a7a49a3d822R233-R237) [[2]](diffhunk://#diff-7de339d38b61a17bd8ac80032efc4100f9de0001097df74073053a7a49a3d822L241-R254)
 
+## [2.1.1] - 2025-07-10
+- Merged PR #22 by @MarcChen: Fix/non unique id generation from wtj offers
+This pull request introduces a new utility function, `pre_process_url`, to clean URLs by removing query parameters, and integrates it into the job scraping workflow to ensure consistent URL handling and ID generation. Additionally, it includes improvements to the job offer extraction logic by dynamically retrieving the company name from the webpage.
+
+### URL Preprocessing and Validation:
+
+* [`services/scraping/src/base_model/job_offer.py`](diffhunk://#diff-7de339d38b61a17bd8ac80032efc4100f9de0001097df74073053a7a49a3d822R45-R50): Added the `pre_process_url` function to strip query parameters from URLs. Updated the `validate_url` method in the `JobOffer` class to use this function for consistent URL validation and cleaning. [[1]](diffhunk://#diff-7de339d38b61a17bd8ac80032efc4100f9de0001097df74073053a7a49a3d822R45-R50) [[2]](diffhunk://#diff-7de339d38b61a17bd8ac80032efc4100f9de0001097df74073053a7a49a3d822L148-R159)
+
+* [`services/scraping/src/welcome_to_the_jungle.py`](diffhunk://#diff-4c44a5339aa611728faf270908d46effb8a63c1f3c88564378bace2bea3ea089R11): Imported the `pre_process_url` function for use in the job scraping logic.
+
+### Job Offer Extraction Enhancements:
+
+* [`services/scraping/src/welcome_to_the_jungle.py`](diffhunk://#diff-4c44a5339aa611728faf270908d46effb8a63c1f3c88564378bace2bea3ea089R146-R156): Updated the `extract_all_offers_url` method to dynamically retrieve and log the company name from the webpage. Integrated the `pre_process_url` function to clean URLs before appending them to `_offers_urls` and generating job offer IDs.
+
