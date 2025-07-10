@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 import warnings
 from datetime import datetime
 from typing import List, Optional
@@ -70,7 +71,10 @@ class LinkedInJobScraper(JobScraperBase):
                 await self._apply_location_filter()
 
             # Get total offers count using the actual LinkedIn DOM structure
-            total_offers = await self._get_total_offers_count()  # noqa: F841
+            total_offers = await self._get_total_offers_count()  # noqa: F84
+            self.logger.info(
+                f"Total offers found: {total_offers} for keyword '{self.keyword}' and location '{self.location}'"
+            )
 
             # Navigate through pages and collect offer URLs
             page_number = 1
@@ -188,22 +192,16 @@ class LinkedInJobScraper(JobScraperBase):
         if not self.page or not self.location:
             return
         try:
-            location_selectors = [
-                'input[id*="jobs-search-box-location-id"]',
-                "input[aria-label*='City']",
-                "input[placeholder*='Location']",
-                ".jobs-search-box__location-input",
-            ]
-            for selector in location_selectors:
-                location_input = self.page.locator(selector)
-                if await location_input.count() > 0:
-                    await location_input.clear()
-                    await location_input.fill(self.location)
-                    await location_input.press("Enter")
-                    await self.wait_random(2, 3)
-                    self.logger.info(f"Applied location filter: {self.location}")
-                    return
-            self.logger.warning("Could not find location input field")
+            location_input = self.page.locator(
+                'input[id*="jobs-search-box-location-id"]'
+            )
+            if await location_input.count() > 0:
+                await location_input.clear()
+                await location_input.fill(self.location)
+                await location_input.press("Enter")
+                await self.wait_random(2, 3)
+                self.logger.info(f"Applied location filter: {self.location}")
+                return
         except Exception as e:
             self.logger.warning(f"Could not apply location filter: {e}")
 
@@ -211,38 +209,22 @@ class LinkedInJobScraper(JobScraperBase):
         """Extract total offers count from LinkedIn's results header."""
         if not self.page:
             return 0
-
         try:
-            # Based on the DOM: <span dir="ltr">570 résultats</span>
-            count_selectors = [
-                ".jobs-search-results-list__subtitle span",
-                ".jobs-search-results-list__text span",
-                ".display-flex.t-normal.t-12.t-black--light span",
-            ]
-
-            for selector in count_selectors:
-                try:
-                    count_element = self.page.locator(selector).first
-                    await count_element.wait_for(timeout=5000)
-                    count_text = await count_element.text_content()
-                    if count_text and any(char.isdigit() for char in count_text):
-                        # Extract numbers from text like "570 résultats" or "1,234 jobs"
-                        import re
-
-                        numbers = re.findall(r"[\d,]+", count_text)
-                        if numbers:
-                            total_offers = int(numbers[0].replace(",", ""))
-                            self.logger.info(f"Total offers found: {total_offers}")
-                            return total_offers
-                except Exception:
-                    continue
-
-            self.logger.warning("Could not determine total offers count")
-            return 0
-
+            await self.page.wait_for_selector(
+                ".jobs-search-results-list__subtitle span[dir='ltr']",
+                timeout=5000,
+            )
+            text = await self._safe_get_text(
+                ".jobs-search-results-list__subtitle span[dir='ltr']", "N/A"
+            )
+            if text and text != "N/A":
+                match = re.search(r"(\d+)", text.replace("\u202f", ""))
+                if match:
+                    return int(match.group(1))
+            self.logger.warning("Could not find total offers count in DOM.")
         except Exception as e:
-            self.logger.warning(f"Error getting total offers count: {e}")
-            return 0
+            self.logger.warning(f"Error extracting total offers count: {e}")
+        return 0
 
     async def _extract_jobs_from_current_page(self) -> int:  # noqa: C901
         """Extract job URLs from the current page using LinkedIn's DOM structure."""
@@ -622,7 +604,6 @@ class LinkedInJobScraper(JobScraperBase):
     def _extract_job_reference(self, url: str) -> str:
         """Extract job ID/reference from LinkedIn URL."""
         try:
-            import re
 
             # LinkedIn job URLs follow pattern: /jobs/view/4254887139/...
             job_id_match = re.search(r"/jobs/view/(\d+)", url)
