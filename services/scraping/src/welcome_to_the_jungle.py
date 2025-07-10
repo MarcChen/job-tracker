@@ -8,6 +8,7 @@ from services.scraping.src.base_model.job_offer import (
     JobOfferInput,
     JobSource,
     generate_job_offer_id,
+    pre_process_url,
 )
 from services.scraping.src.base_model.job_scraper_base import JobScraperBase
 from services.storage.src.notion_integration import NotionClient
@@ -144,11 +145,11 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
                                         )
                                     self._offers_urls.append(
                                         {
-                                            "url": href,
+                                            "url": pre_process_url(href),
                                             "id": generate_job_offer_id(
                                                 company="Apple",
                                                 title=job_title.strip(),
-                                                url=href,
+                                                url=pre_process_url(href),
                                             ),
                                         }
                                     )
