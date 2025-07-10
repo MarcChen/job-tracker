@@ -22,19 +22,21 @@ def parse_scraper_selection(  # noqa: C901
     elif selection in ["vie", "business-france", "businessfrance"]:
         return ["1"]
     elif selection == "cdi":
-        return ["2", "3", "4", "5"]
+        return ["2", "3", "4", "5", "6"]
     elif selection in ["tech", "technology"]:
-        return ["3", "4", "5"]
+        return ["3", "4", "5", "6"]
     elif selection in ["wttj", "welcome-to-the-jungle"]:
         return ["4", "5"]
     elif selection in ["airfrance", "air-france"]:
         return ["2"]
     elif selection == "apple":
         return ["3"]
+    elif selection == "linkedin":
+        return ["6"]
     elif selection in ["data", "data-engineer", "dataengineer"]:
-        return ["4"]
+        return ["4", "6"]
     elif selection in ["ai", "artificial-intelligence"]:
-        return ["5"]
+        return ["5", "6"]
     elif selection in ["french-companies", "france"]:
         return ["1", "2"]  # VIE and Air France
     else:
@@ -58,17 +60,18 @@ def create_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Scraper Selection Options:
-  all               - Run all scrapers (1,2,3,4,5)
+  all               - Run all scrapers (1,2,3,4,5,6)
   vie               - VIE-focused scrapers (1) [alias: business-france, businessfrance]
-  cdi               - CDI-focused scrapers (2,3,4,5)
-  tech              - Tech company scrapers (3,4,5) [alias: technology]
+  cdi               - CDI-focused scrapers (2,3,4,5,6)
+  tech              - Tech company scrapers (3,4,5,6) [alias: technology]
   wttj              - Welcome to the Jungle scrapers (4,5) [alias: welcome-to-the-jungle]
   french-companies  - French companies (1,2) [alias: france]
   airfrance         - Air France only (2) [alias: air-france]
   apple             - Apple only (3)
-  data              - Data Engineer roles (4) [alias: data-engineer, dataengineer]
-  ai                - AI roles (5) [alias: artificial-intelligence]
-  1,3,5             - Specific scrapers by ID (comma-separated)
+  linkedin          - LinkedIn only (6)
+  data              - Data Engineer roles (4,6) [alias: data-engineer, dataengineer]
+  ai                - AI roles (5,6) [alias: artificial-intelligence]
+  1,3,5,6           - Specific scrapers by ID (comma-separated)
 
 Available Scrapers:
   1 - Business France (VIE)
@@ -76,17 +79,19 @@ Available Scrapers:
   3 - Apple
   4 - Welcome to the Jungle (Data Engineer)
   5 - Welcome to the Jungle (AI)
+  6 - LinkedIn
 
 Examples:
   python main.py --scrapers all
   python main.py --scrapers vie --debug
   python main.py --scrapers apple
-  python main.py --scrapers 1,3,5
+  python main.py --scrapers 1,3,5,6
   python main.py --list-scrapers
   python main.py --scrapers tech --include "python" "machine learning"
   python main.py --scrapers all --exclude "senior" "lead"
   python main.py --scrapers french-companies
   python main.py --scrapers data --debug
+  python main.py --scrapers linkedin
         """,
     )
 

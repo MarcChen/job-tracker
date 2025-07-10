@@ -47,6 +47,15 @@ def get_scrapers_config() -> Dict[str, dict]:
             "location": "Île-de-France",
             "category": "CDI",
         },
+        "6": {
+            "name": "LinkedIn",
+            "url": JobURL.LINKEDIN,
+            "description": "Job offers from LinkedIn (France, Data/AI focus)",
+            "enabled": True,
+            "category": "CDI",
+            "keyword": "data",
+            "location": "Paris et périphérie",
+        },
     }
 
 

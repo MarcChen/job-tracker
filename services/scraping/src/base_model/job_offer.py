@@ -69,6 +69,7 @@ class JobURL(str, Enum):
     # APPLE = "https://jobs.apple.com/fr-fr/search?sort=relevance&location=france-FRAC+singapore-SGP+hong-kong-HKGC+taiwan-TWN"
     APPLE = "https://jobs.apple.com/fr-fr/search?sort=relevance&location=france-FRAC"
     WELCOME_TO_THE_JUNGLE = "https://www.welcometothejungle.com/fr/jobs?&refinementList%5Bcontract_type%5D%5B%5D=full_time&refinementList%5Bcontract_type%5D%5B%5D=temporary&refinementList%5Bcontract_type%5D%5B%5D=freelance"
+    LINKEDIN = "https://www.linkedin.com/jobs/"
 
 
 class ContractType(str, Enum):

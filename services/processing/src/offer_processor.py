@@ -170,6 +170,14 @@ class OfferProcessor:
             scraper_params["keyword"] = config.get("keyword", "artificial intelligence")
             scraper_params["location"] = config.get("location", "Île-de-France")
             return WelcomeToTheJungleJobScraper(**scraper_params)
+        elif scraper_id == "6":  # LinkedIn
+            scraper_params["keyword"] = config.get(
+                "keyword", "data, artificial intelligence"
+            )
+            scraper_params["location"] = config.get("location", "France")
+            from services.scraping.src.linked import LinkedInJobScraper
+
+            return LinkedInJobScraper(**scraper_params)
         else:
             raise ValueError(f"Unknown scraper ID: {scraper_id}")
 

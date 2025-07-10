@@ -54,17 +54,12 @@ class LinkedInJobScraper(JobScraperBase):
         try:
             await self.page.goto(self.url)
             await self.wait_random(2, 4)
+            # Handle potential cookie prompts and popups
+            await self._handle_popups()
 
             # TODO: Implement login functionality if required
             # This should handle authentication to access more job listings
             await self._handle_login_if_required()
-
-            # Handle potential cookie prompts and popups
-            await self._handle_popups()
-
-            # TODO: Implement advanced filtering functionality
-            # This should handle filters like experience level, job type, etc.
-            await self._apply_advanced_filters()
 
             # Apply keyword filter if provided
             if self.keyword:
@@ -119,69 +114,86 @@ class LinkedInJobScraper(JobScraperBase):
         self.logger.info(f"Total URLs collected: {len(self._offers_urls)}")
 
     async def _handle_login_if_required(self) -> None:
-        """
-        TODO: Handle LinkedIn login if required for accessing job listings.
-        This method should:
-        1. Check if login is required
-        2. Handle email/password input
-        3. Deal with 2FA if enabled
-        4. Handle potential captchas
-        """
-        self.logger.info("TODO: Implement LinkedIn login functionality")
-        pass
-
-    async def _apply_advanced_filters(self) -> None:
-        """
-        TODO: Apply advanced filters like experience level, job type, company size, etc.
-        This method should:
-        1. Open the filters panel
-        2. Select appropriate filter options
-        3. Apply the filters
-        """
-        self.logger.info("TODO: Implement advanced filtering functionality")
-        pass
-
-    async def _apply_keyword_filter(self) -> None:
-        """Apply keyword filter using LinkedIn's search interface."""
+        """Handle LinkedIn login if required using env vars."""
         if not self.page:
             return
-
+        email = os.getenv("LINKEDIN_EMAIL")
+        password = os.getenv("LINKEDIN_PASSWORD")
+        if not email or not password:
+            self.logger.error(
+                "LinkedIn email or password env vars not set. Skipping login."
+            )
+            raise RuntimeError(
+                "LinkedIn email or password not set in environment variables."
+            )
         try:
-            # Look for the keyword input field using LinkedIn's actual selectors
-            keyword_selectors = [
-                "input[aria-label*='Search jobs']",
-                "input[placeholder*='Search jobs']",
-                ".jobs-search-box__text-input",
-            ]
+            # Wait for login form to appear
+            await self.page.wait_for_selector("#session_key", timeout=10000)
+            await self.page.wait_for_selector("#session_password", timeout=10000)
+            # Fill email
+            email_input = self.page.locator("#session_key")
+            await email_input.fill(email)
+            # Fill password
+            password_input = self.page.locator("#session_password")
+            await password_input.fill(password)
+            # Click sign in
+            submit_btn = self.page.locator('[data-id="sign-in-form__submit-btn"]')
+            await submit_btn.click()
+            self.logger.info("LinkedIn login submitted.")
+            await self.wait_random(2, 4)
+            # After login, check for suspicious login/verification challenge
+            try:
+                # Wait for main content to load
+                await self.page.wait_for_selector("main.app__content", timeout=5000)
+                # Check for the error banner and verification form
+                error_banner = self.page.locator(".body__banner--error")
+                verification_header = self.page.locator("h1.content__header")
+                verification_form = self.page.locator("form#email-pin-challenge")
+                if (
+                    await error_banner.count() > 0
+                    and await error_banner.is_visible()
+                    and await verification_header.count() > 0
+                    and "Let’s do a quick verification"
+                    in (await verification_header.text_content() or "")
+                    and await verification_form.count() > 0
+                ):
+                    self.logger.error(
+                        "LinkedIn triggered suspicious login verification challenge. Manual intervention required."
+                    )
+                    raise RuntimeError(
+                        "LinkedIn suspicious login verification challenge encountered."
+                    )
+            except Exception:
+                pass
+            self.logger.info("LinkedIn login successful.")
+        except Exception as e:
+            self.logger.error(f"LinkedIn login failed: {e}")
 
-            for selector in keyword_selectors:
-                keyword_input = self.page.locator(selector)
-                if await keyword_input.count() > 0:
-                    await keyword_input.clear()
-                    await keyword_input.fill(self.keyword)
-                    await keyword_input.press("Enter")
-                    await self.wait_random(2, 3)
-                    self.logger.info(f"Applied keyword filter: {self.keyword}")
-                    return
-
-            self.logger.warning("Could not find keyword input field")
-
+    async def _apply_keyword_filter(self) -> None:
+        """Apply keyword filter using LinkedIn's search box."""
+        if not self.page or not self.keyword:
+            return
+        try:
+            keyword_input = self.page.locator('input[id*="jobs-search-box-keyword-id"]')
+            if await keyword_input.count() > 0:
+                await keyword_input.fill(self.keyword)
+                await self.wait_random(0.5, 1.5)
+                await keyword_input.press("Enter")
+                self.logger.info(f"Applied keyword filter: {self.keyword}")
         except Exception as e:
             self.logger.warning(f"Could not apply keyword filter: {e}")
 
     async def _apply_location_filter(self) -> None:
-        """Apply location filter using LinkedIn's search interface."""
-        if not self.page:
+        """Apply location filter using LinkedIn's search box."""
+        if not self.page or not self.location:
             return
-
         try:
-            # Look for the location input field using LinkedIn's actual selectors
             location_selectors = [
+                'input[id*="jobs-search-box-location-id"]',
                 "input[aria-label*='City']",
                 "input[placeholder*='Location']",
                 ".jobs-search-box__location-input",
             ]
-
             for selector in location_selectors:
                 location_input = self.page.locator(selector)
                 if await location_input.count() > 0:
@@ -191,9 +203,7 @@ class LinkedInJobScraper(JobScraperBase):
                     await self.wait_random(2, 3)
                     self.logger.info(f"Applied location filter: {self.location}")
                     return
-
             self.logger.warning("Could not find location input field")
-
         except Exception as e:
             self.logger.warning(f"Could not apply location filter: {e}")
 
@@ -623,55 +633,30 @@ class LinkedInJobScraper(JobScraperBase):
         return "N/A"
 
     async def _handle_popups(self) -> None:  # noqa: C901
-        """Handle LinkedIn popups, login prompts, and cookie banners."""
+        """
+        Handles LinkedIn popups, specifically cookie consent, by rejecting non-essential cookies.
+        """
         if not self.page:
             return
 
-        # Handle cookie banners
-        cookie_selectors = [
-            "button[data-tracking-control-name='guest_homepage-basic_accept-button']",
-            ".cookie-consent-banner__accept-button",
-            "button[class*='cookie'][class*='accept']",
-        ]
-
-        for selector in cookie_selectors:
-            try:
-                cookie_btn = self.page.locator(selector)
-                if await cookie_btn.count() > 0:
-                    await cookie_btn.click()
-                    await self.wait_random(1, 2)
-                    break
-            except Exception:
-                continue
-
-        # Handle login/signup prompts
         try:
-            # Look for "Skip for now" or similar buttons
-            skip_selectors = [
-                "button[data-tracking-control-name*='skip']",
-                "a[href*='guest']",
-                ".guest-mode-toggle",
-            ]
-
-            for selector in skip_selectors:
-                skip_btn = self.page.locator(selector)
-                if await skip_btn.count() > 0:
-                    await skip_btn.click()
-                    await self.wait_random(1, 2)
-                    break
-        except Exception:
-            pass
-
-        # Handle location permission prompts
-        try:
-            location_deny = self.page.locator(
-                "button[class*='location'][class*='deny']"
-            )
-            if await location_deny.count() > 0:
-                await location_deny.click()
-                await self.wait_random(1, 2)
-        except Exception:
-            pass
+            # Wait for the global alert container (cookie consent popup)
+            popup_container = self.page.locator("#artdeco-global-alert-container")
+            if await popup_container.count() > 0:
+                # Look for the Reject button inside the popup
+                reject_button = popup_container.locator(
+                    "button[data-tracking-control-name='ga-cookie.consent.deny.v4'], button[data-control-name='ga-cookie.consent.deny.v4']"
+                )
+                if await reject_button.count() > 0 and await reject_button.is_visible():
+                    await reject_button.click()
+                    await self.wait_random(0.5, 1.5)
+                    self.logger.info("Rejected LinkedIn cookie consent popup.")
+                else:
+                    self.logger.info("Reject button not found in cookie consent popup.")
+            else:
+                self.logger.info("No cookie consent popup detected.")
+        except Exception as e:
+            self.logger.warning(f"Error handling popups: {e}")
 
 
 if __name__ == "__main__":
