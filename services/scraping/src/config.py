@@ -32,19 +32,19 @@ def get_scrapers_config() -> Dict[str, dict]:
         "4": {
             "name": "Welcome to the Jungle (Data Engineer)",
             "url": JobURL.WELCOME_TO_THE_JUNGLE,
-            "description": "Data Engineer positions from WTTJ (Île-de-France)",
+            "description": "Data Engineer positions from WTTJ",
             "enabled": True,
             "keyword": "data engineer",
-            "location": "Île-de-France",
+            "location": "Paris",
             "category": "CDI",
         },
         "5": {
             "name": "Welcome to the Jungle (AI)",
             "url": JobURL.WELCOME_TO_THE_JUNGLE,
-            "description": "AI positions from WTTJ (Île-de-France)",
+            "description": "AI positions from WTTJ",
             "enabled": True,
             "keyword": "artificial intelligence",
-            "location": "Île-de-France",
+            "location": "Paris",
             "category": "CDI",
         },
     }
