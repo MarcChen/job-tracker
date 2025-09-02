@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from playwright.async_api import Browser, Locator, Page, async_playwright
+from playwright_stealth import Stealth, ALL_EVASIONS_DISABLED_KWARGS
 
 from services.scraping.src.base_model.job_offer import (
     JobOffer,
@@ -77,9 +78,15 @@ class JobScraperBase:
             "Chrome/114.0.0.0 Safari/537.36"
         )
         extra_headers = {
-            "Accept-Language": "en-US,en;q=0.9",
-            # Add more headers if needed
+            "Accept-Language": "fr-FR,fr;q=0.9",
+            # Ajoutez d'autres en-têtes si nécessaire
         }
+        custom_languages = ("fr-FR", "fr")
+        stealth = Stealth(
+            navigator_languages_override=custom_languages,
+            init_scripts_only=True
+        )
+
         if self.browser is None:
             self._playwright = await async_playwright().start()
             self._browser = await self._playwright.chromium.launch(
@@ -93,7 +100,9 @@ class JobScraperBase:
             user_agent=user_agent,
             extra_http_headers=extra_headers,
         )
+        await stealth.apply_stealth_async(self._context)
         self._page = await self._context.new_page()
+
 
     async def _cleanup_browser(self) -> None:
         """Cleanup browser resources."""
