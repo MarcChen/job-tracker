@@ -46,7 +46,7 @@ class LinkedInJobScraper(JobScraperBase):
         # Ensure _offers_urls is always a list
         if self._offers_urls is None:
             self._offers_urls = []
-        
+
         # Cache for iframe reference
         self._iframe_locator = None
         self._use_iframe = False
@@ -60,23 +60,25 @@ class LinkedInJobScraper(JobScraperBase):
     async def _detect_dom_structure(self) -> bool:
         if not self.page:
             return False
-            
+
         try:
             iframe_selector = 'iframe[data-testid="interop-iframe"]'
             iframe_locator = self.page.locator(iframe_selector)
-            
+
             if await iframe_locator.count() > 0:
                 self._iframe_locator = self.page.frame_locator(iframe_selector)
-                
+
                 test_selector = "li[data-occludable-job-id], .jobs-search-box, .job-details-jobs-unified-top-card__container"
                 try:
-                    await self._iframe_locator.locator(test_selector).first.wait_for(timeout=3000)
+                    await self._iframe_locator.locator(test_selector).first.wait_for(
+                        timeout=3000
+                    )
                     self._use_iframe = True
                     self.logger.debug("Detected iframe DOM structure")
                     return True
                 except:
                     pass
-            
+
             test_selector = "li[data-occludable-job-id], .jobs-search-box, .job-details-jobs-unified-top-card__container"
             try:
                 await self.page.locator(test_selector).first.wait_for(timeout=3000)
@@ -86,10 +88,10 @@ class LinkedInJobScraper(JobScraperBase):
                 return True
             except:
                 pass
-                
+
         except Exception as e:
             self.logger.warning(f"Error detecting DOM structure: {e}")
-        
+
         # Default fallback
         self._use_iframe = False
         self._iframe_locator = None
@@ -111,30 +113,38 @@ class LinkedInJobScraper(JobScraperBase):
             await self.wait_random(2, 4)
             await self._handle_popups()
             await self.accept_cookies()
-            
+
             await self._detect_dom_structure()
 
-            total_offers = min(await self._get_total_offers_count(), MAX_JOBS_TO_FETCH)  # noqa: F84
+            total_offers = min(
+                await self._get_total_offers_count(), MAX_JOBS_TO_FETCH
+            )  # noqa: F84
             self.logger.info(
                 f"Total offers found: {total_offers} for keyword '{self.keyword}' and location '{self.location}'"
             )
 
-            # Load all offers 
+            # Load all offers
             loaded_offers = 0
             while loaded_offers < total_offers:
                 try:
                     await self._detect_dom_structure()
-                    await self._get_locator("ul.jobs-search__results-list").wait_for(timeout=5000)
+                    await self._get_locator("ul.jobs-search__results-list").wait_for(
+                        timeout=5000
+                    )
                     await self.scroll_until_bottom()
 
                     try:
-                        see_more_button = self.page.locator("button.infinite-scroller__show-more-button.infinite-scroller__show-more-button--visible")
+                        see_more_button = self.page.locator(
+                            "button.infinite-scroller__show-more-button.infinite-scroller__show-more-button--visible"
+                        )
                         await see_more_button.wait_for(state="visible", timeout=10000)
                         await see_more_button.scroll_into_view_if_needed()
                         await self.wait_random(0.1, 0.6)
                         await see_more_button.click()
                     except Exception as e:
-                        self.logger.debug(f"See more button not found or not clickable: {e}")
+                        self.logger.debug(
+                            f"See more button not found or not clickable: {e}"
+                        )
                         break
 
                     loaded_offers += OFFER_PER_CLICK
@@ -159,7 +169,9 @@ class LinkedInJobScraper(JobScraperBase):
         if not self.page:
             return 10
         try:
-            small_element = self._get_locator('span.results-context-header__job-count').first
+            small_element = self._get_locator(
+                "span.results-context-header__job-count"
+            ).first
             await small_element.wait_for(timeout=5000)
             text = await small_element.text_content()
             if text and text.strip():
@@ -171,7 +183,7 @@ class LinkedInJobScraper(JobScraperBase):
 
         except Exception as e:
             self.logger.warning(f"Error extracting total offers count: {e}")
-    
+
         return 10
 
     async def accept_cookies(self) -> None:
@@ -187,8 +199,9 @@ class LinkedInJobScraper(JobScraperBase):
                 await self.wait_random(1, 2)
                 self.logger.debug("Clicked LinkedIn cookie consent accept button.")
         except Exception as e:
-            self.logger.debug(f"Cookie consent accept button not found or error clicking: {e}")
-
+            self.logger.debug(
+                f"Cookie consent accept button not found or error clicking: {e}"
+            )
 
     async def _extract_jobs_urls_and_title_from_current_page(self) -> int:  # noqa: C901
         if not self.page:
@@ -232,9 +245,7 @@ class LinkedInJobScraper(JobScraperBase):
                             )
                             current_page_offers += 1
 
-                            self.logger.debug(
-                                f"Extracted: {job_title} - {full_url}"
-                            )
+                            self.logger.debug(f"Extracted: {job_title} - {full_url}")
 
                 except Exception as e:
                     self.logger.debug(f"Error extracting job {i}: {e}")
@@ -251,7 +262,9 @@ class LinkedInJobScraper(JobScraperBase):
             return False
 
         try:
-            next_button = self._get_locator("//button[@aria-label='Voir la page suivante']")
+            next_button = self._get_locator(
+                "//button[@aria-label='Voir la page suivante']"
+            )
             if await next_button.count() > 0 and await next_button.is_enabled():
                 await next_button.scroll_into_view_if_needed()
                 await next_button.click()
@@ -277,7 +290,9 @@ class LinkedInJobScraper(JobScraperBase):
 
                 # Title
                 try:
-                    title_el = self._get_locator("//h1[contains(@class, 'top-card-layout__title')]").first
+                    title_el = self._get_locator(
+                        "//h1[contains(@class, 'top-card-layout__title')]"
+                    ).first
                     await title_el.wait_for(timeout=5000)
                     title = (await title_el.inner_html()).strip()
                 except Exception as e:
@@ -286,7 +301,9 @@ class LinkedInJobScraper(JobScraperBase):
 
                 # Company
                 try:
-                    company_el = self._get_locator("//a[contains(@class, 'topcard__org-name-link')]").first
+                    company_el = self._get_locator(
+                        "//a[contains(@class, 'topcard__org-name-link')]"
+                    ).first
                     await company_el.wait_for(timeout=5000)
                     company = (await company_el.inner_text()).strip()
                 except Exception as e:
@@ -295,7 +312,9 @@ class LinkedInJobScraper(JobScraperBase):
 
                 # Location
                 try:
-                    location_el = self._get_locator("//span[contains(@class, 'topcard__flavor') and contains(@class, 'topcard__flavor--bullet')]").first
+                    location_el = self._get_locator(
+                        "//span[contains(@class, 'topcard__flavor') and contains(@class, 'topcard__flavor--bullet')]"
+                    ).first
                     await location_el.wait_for(timeout=5000)
                     location = (await location_el.inner_text()).strip()
                 except Exception as e:
@@ -304,11 +323,15 @@ class LinkedInJobScraper(JobScraperBase):
 
                 # Description
                 try:
-                    desc_full_el = self._get_locator("//div[contains(@class, 'description__text') and contains(@class, 'description__text--rich')]").first
+                    desc_full_el = self._get_locator(
+                        "//div[contains(@class, 'description__text') and contains(@class, 'description__text--rich')]"
+                    ).first
                     await desc_full_el.wait_for(timeout=5000)
                     description = (await desc_full_el.inner_text()).strip()
                 except Exception as e:
-                    self.logger.debug(f"Warning in getting jobDescription: {str(e)[:50]}")
+                    self.logger.debug(
+                        f"Warning in getting jobDescription: {str(e)[:50]}"
+                    )
                     description = "N/A"
 
                 # Extract reference/job ID from URL
@@ -333,12 +356,9 @@ class LinkedInJobScraper(JobScraperBase):
 
             except Exception as e:
                 logging.warning(f"Error extracting data for offer {offer['url']}: {e}")
-                self.logger.debug(
-                    f"Failed to extract data from URL: {offer['url']}"
-                )
+                self.logger.debug(f"Failed to extract data from URL: {offer['url']}")
 
         return offers
-
 
     def _extract_job_reference(self, url: str) -> str:
         """Extract job ID/reference from LinkedIn URL."""
@@ -357,7 +377,9 @@ class LinkedInJobScraper(JobScraperBase):
         if not self.page:
             return
         try:
-            btns = self.page.locator("//button[contains(@class, 'modal__dismiss') and contains(@class, 'btn-tertiary')]")
+            btns = self.page.locator(
+                "//button[contains(@class, 'modal__dismiss') and contains(@class, 'btn-tertiary')]"
+            )
             count = await btns.count()
             for i in range(count):
                 btn = btns.nth(i)
@@ -366,6 +388,7 @@ class LinkedInJobScraper(JobScraperBase):
                     await self.wait_random(1, 2)
         except Exception as e:
             self.logger.debug(f"No popup to dismiss or error handling popup: {e}")
+
 
 if __name__ == "__main__":
 

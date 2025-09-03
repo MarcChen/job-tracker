@@ -1,14 +1,14 @@
 import asyncio
+import functools
 import logging
 import os
 import random
 import warnings
 from datetime import datetime
 from typing import List, Optional
-import functools
 
 from playwright.async_api import Browser, Locator, Page, async_playwright
-from playwright_stealth import Stealth, ALL_EVASIONS_DISABLED_KWARGS
+from playwright_stealth import ALL_EVASIONS_DISABLED_KWARGS, Stealth
 
 from services.scraping.src.base_model.job_offer import (
     JobOffer,
@@ -26,8 +26,11 @@ def log_call(level=logging.DEBUG):
             self.logger.log(level, msg)
             result = await func(self, *args, **kwargs)
             return result
+
         return wrapper
+
     return decorator
+
 
 class JobScraperBase:
     """Base class for job scrapers using Playwright and Pydantic models."""
@@ -95,8 +98,7 @@ class JobScraperBase:
         }
         custom_languages = ("fr-FR", "fr")
         stealth = Stealth(
-            navigator_languages_override=custom_languages,
-            init_scripts_only=True
+            navigator_languages_override=custom_languages, init_scripts_only=True
         )
 
         if self.browser is None:
@@ -114,7 +116,6 @@ class JobScraperBase:
         )
         await stealth.apply_stealth_async(self._context)
         self._page = await self._context.new_page()
-
 
     async def _cleanup_browser(self) -> None:
         """Cleanup browser resources."""
@@ -258,7 +259,9 @@ class JobScraperBase:
                     f"document.querySelector('{selector}') ? document.querySelector('{selector}').scrollHeight : 0"
                 )
             else:
-                await self.page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                await self.page.evaluate(
+                    "window.scrollTo(0, document.body.scrollHeight)"
+                )
                 new_height = await self.page.evaluate("document.body.scrollHeight")
             if new_height == previous_height:
                 break

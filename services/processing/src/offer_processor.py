@@ -10,9 +10,9 @@ from services.scraping.src.airfrance import AirFranceJobScraper
 from services.scraping.src.apple import AppleJobScraper
 from services.scraping.src.base_model.job_offer import JobOffer
 from services.scraping.src.config import get_scrapers_config
+from services.scraping.src.linked import LinkedInJobScraper
 from services.scraping.src.vie import VIEJobScraper
 from services.scraping.src.welcome_to_the_jungle import WelcomeToTheJungleJobScraper
-from services.scraping.src.linked import LinkedInJobScraper
 from services.storage.src.notion_integration import NotionClient
 
 
@@ -168,9 +168,7 @@ class OfferProcessor:
             scraper_params["location"] = config["location"]
             return WelcomeToTheJungleJobScraper(**scraper_params)
         elif scraper_id in {"6", "7"}:  # LinkedIn
-            scraper_params["keyword"] = config.get(
-                "keyword", "data"
-            )
+            scraper_params["keyword"] = config.get("keyword", "data")
             scraper_params["location"] = config.get("location", "Paris")
 
             return LinkedInJobScraper(**scraper_params)
