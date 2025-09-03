@@ -185,6 +185,8 @@ class OfferProcessor:
             offers: Optional list of JobOffer instances to process.
                    If None, will use scraped_offers from scrape_offers().
         """
+        # TODO: Refactor to use Python generators (yield) for processing offers to optimize memory usage
+
         # Use provided offers or fall back to scraped offers
         offers_to_process = offers or self.scraped_offers
 
