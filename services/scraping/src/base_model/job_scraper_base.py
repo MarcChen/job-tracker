@@ -188,8 +188,7 @@ class JobScraperBase:
             notion_client (NotionClient): The Notion client to use for checking existence.
         """
         if not self._offers_urls:
-            if self.debug:
-                self.logger.debug("No offers to filter - _offers_urls is empty")
+            self.logger.debug("No offers to filter - _offers_urls is empty")
             return
 
         # Extract all IDs from the offers_urls list, filtering out None values
@@ -200,14 +199,12 @@ class JobScraperBase:
                 offer_ids.append(offer_id)
 
         if not offer_ids:
-            if self.debug:
-                self.logger.debug("No valid offer IDs found in _offers_urls")
+            self.logger.debug("No valid offer IDs found in _offers_urls")
             return
 
-        if self.debug:
-            self.logger.debug(
-                f"Checking {len(offer_ids)} offers against Notion database..."
-            )
+        self.logger.debug(
+            f"Checking {len(offer_ids)} offers against Notion database..."
+        )
 
         # Use NotionClient's batch checking method
         existence_results = notion_client._check_multiple_offers_exist(offer_ids)
