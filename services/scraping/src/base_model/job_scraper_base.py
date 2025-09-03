@@ -5,6 +5,7 @@ import random
 import warnings
 from datetime import datetime
 from typing import List, Optional
+import functools
 
 from playwright.async_api import Browser, Locator, Page, async_playwright
 from playwright_stealth import Stealth, ALL_EVASIONS_DISABLED_KWARGS
@@ -16,6 +17,17 @@ from services.scraping.src.base_model.job_offer import (
 )
 from services.storage.src.notion_integration import NotionClient
 
+
+def log_call(level=logging.DEBUG):
+    def decorator(func):
+        @functools.wraps(func)
+        async def wrapper(self, *args, **kwargs):
+            msg = f"calling {func.__name__} (args={args}, kwargs={kwargs})"
+            self.logger.log(level, msg)
+            result = await func(self, *args, **kwargs)
+            return result
+        return wrapper
+    return decorator
 
 class JobScraperBase:
     """Base class for job scrapers using Playwright and Pydantic models."""
@@ -175,6 +187,7 @@ class JobScraperBase:
 
         return False
 
+    @log_call()
     async def filter_already_scraped_offers(  # noqa: C901
         self, notion_client: NotionClient
     ) -> None:
@@ -243,11 +256,11 @@ class JobScraperBase:
         try:
             return offer_input.to_job_offer()
         except Exception as e:
-            warnings.warn(f"Failed to convert offer input to JobOffer: {e}")
-            if self.debug:
-                self.logger.debug(f"Problematic offer input: {offer_input}")
+            self.logger.warning(f"Failed to convert offer input to JobOffer: {e}")
+            self.logger.debug(f"Problematic offer input: {offer_input}")
             return None
 
+    @log_call()
     async def save_error_screenshot(self, func_name: str):
         """Save a screenshot with the function name and timestamp."""
         if self._page:
@@ -268,6 +281,7 @@ class JobScraperBase:
         wait_time = random.uniform(min_seconds, max_seconds)
         await asyncio.sleep(wait_time)
 
+    @log_call()
     async def scroll_into_view(self, locator: str) -> None:
         """Scroll an element into view."""
         if self._page:

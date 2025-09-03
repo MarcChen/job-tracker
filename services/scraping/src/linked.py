@@ -4,7 +4,6 @@ import re
 import warnings
 from datetime import datetime
 from typing import List, Optional
-import functools
 
 from services.scraping.src.base_model.job_offer import (
     ContractType,
@@ -12,23 +11,12 @@ from services.scraping.src.base_model.job_offer import (
     JobSource,
     generate_job_offer_id,
 )
-from services.scraping.src.base_model.job_scraper_base import JobScraperBase
+from services.scraping.src.base_model.job_scraper_base import JobScraperBase, log_call
 from services.scraping.src.linked_url_generate import LinkedinUrlGenerate
 from services.storage.src.notion_integration import NotionClient
 
 NUM_JOBS_PER_PAGE = 25
 
-def log_success_debug(message):
-    def decorator(func):
-        @functools.wraps(func)
-        async def wrapper(self, *args, **kwargs):
-            result = await func(self, *args, **kwargs)
-            self.logger.debug(message)
-            return result
-
-        return wrapper
-
-    return decorator
 
 
 class LinkedInJobScraper(JobScraperBase):
@@ -66,34 +54,23 @@ class LinkedInJobScraper(JobScraperBase):
         self._use_iframe = False
 
     def _get_locator(self, selector: str):
-        """
-        Get a locator that automatically uses iframe or page based on DOM structure.
-        This respects the DRY principle by centralizing the iframe/page decision logic.
-        """
         if self._use_iframe and self._iframe_locator:
             return self._iframe_locator.locator(selector)
         else:
             return self.page.locator(selector)
 
-    @log_success_debug("Successfully detected DOM structure.")
+    @log_call()
     async def _detect_dom_structure(self) -> bool:
-        """
-        Detect whether LinkedIn is using iframe structure or direct DOM.
-        Sets internal flags for future locator usage.
-        """
         if not self.page:
             return False
             
         try:
-            # Check if iframe exists and is accessible
             iframe_selector = 'iframe[data-testid="interop-iframe"]'
             iframe_locator = self.page.locator(iframe_selector)
             
             if await iframe_locator.count() > 0:
-                # Try to access iframe content
                 self._iframe_locator = self.page.frame_locator(iframe_selector)
                 
-                # Test if we can find job-related content in iframe
                 test_selector = "li[data-occludable-job-id], .jobs-search-box, .job-details-jobs-unified-top-card__container"
                 try:
                     await self._iframe_locator.locator(test_selector).first.wait_for(timeout=3000)
@@ -101,10 +78,8 @@ class LinkedInJobScraper(JobScraperBase):
                     self.logger.debug("Detected iframe DOM structure")
                     return True
                 except:
-                    # Iframe exists but content not accessible, fallback to page
                     pass
             
-            # Fallback: check if content is directly in page
             test_selector = "li[data-occludable-job-id], .jobs-search-box, .job-details-jobs-unified-top-card__container"
             try:
                 await self.page.locator(test_selector).first.wait_for(timeout=3000)
@@ -151,8 +126,7 @@ class LinkedInJobScraper(JobScraperBase):
                 f"Total offers found: {total_offers} for keyword '{self.keyword}' and location '{self.location}'"
             )
 
-            # total_pages = (total_offers // NUM_JOBS_PER_PAGE) + (1 if total_offers % NUM_JOBS_PER_PAGE else 0)
-            total_pages = 1
+            total_pages = (total_offers // NUM_JOBS_PER_PAGE) + (1 if total_offers % NUM_JOBS_PER_PAGE else 0)
 
             # Navigate through pages and collect offer URLs
             for page in range(total_pages):
@@ -166,7 +140,7 @@ class LinkedInJobScraper(JobScraperBase):
                     
                     await self.wait_random(1, 2)
 
-                    current_page_offers = await self._extract_jobs_from_current_page()
+                    current_page_offers = await self._extract_jobs_urls_and_title_from_current_page()
 
                     if current_page_offers == 0:
                         self.logger.warning("No offers found on current page, stopping")
@@ -186,9 +160,8 @@ class LinkedInJobScraper(JobScraperBase):
         self.logger.info("Finished loading all available offers.")
         self.logger.info(f"Total URLs collected: {len(self._offers_urls)}")
 
-    @log_success_debug("Successfully handled login.")
+    @log_call()
     async def login(self) -> None:
-        """Handle LinkedIn login if required using env vars and modal selectors."""
         if not self.page:
             return
         
@@ -203,47 +176,35 @@ class LinkedInJobScraper(JobScraperBase):
             )
         
         try:
-            # Check if we're already on the login page or need to navigate
             current_url = self.page.url
             if "/login" not in current_url:
-                # Look for and click "Sign in with email" button
                 sign_in_button = self.page.locator('a[data-test-id="home-hero-sign-in-cta"]')
                 if await sign_in_button.count() > 0:
                     await sign_in_button.click()
                     await self.wait_random(2, 3)
                 else:
-                    # Fallback: navigate directly to login page
                     await self.page.goto("https://www.linkedin.com/login")
                     await self.wait_random(2, 3)
             
-            # Wait for login form to load
             await self.page.wait_for_selector('#username', timeout=10000)
             
-            # Fill in email/username
             email_input = self.page.locator('#username')
             await email_input.fill(email)
             await self.wait_random(0.5, 1)
             
-            # Fill in password
             password_input = self.page.locator('#password')
             await password_input.fill(password)
             await self.wait_random(0.5, 1)
             
-            # Submit the form using the working selector
             submit_button = self.page.locator('button.btn__primary--large[data-litms-control-urn="login-submit"][type="submit"]')
             if await submit_button.count() > 0 and await submit_button.is_visible():
                 await submit_button.click()
             else:
-                # Fallback: press Enter on password field
                 await password_input.press("Enter")
             
-            # Wait for navigation after login
             await self.wait_random(3, 5)
             
-            # Check if login was successful by looking for common post-login elements
-            # or check if we're redirected away from login page
             try:
-                # Wait for either successful redirect or error message
                 await self.page.wait_for_function(
                     """() => {
                         return window.location.pathname !== '/login' || 
@@ -252,14 +213,12 @@ class LinkedInJobScraper(JobScraperBase):
                     timeout=10000
                 )
                 
-                # Check for login errors
                 error_elements = self.page.locator('.form__label--error:not(.hidden__imp)')
                 if await error_elements.count() > 0:
                     error_text = await error_elements.first.text_content()
                     self.logger.error(f"LinkedIn login failed: {error_text}")
                     raise RuntimeError(f"LinkedIn login failed: {error_text}")
                 
-                # Check if we're still on login page (could indicate failure)
                 if "/login" in self.page.url:
                     self.logger.warning("Still on login page after submission - login may have failed")
                 else:
@@ -283,22 +242,18 @@ class LinkedInJobScraper(JobScraperBase):
             await small_element.wait_for(timeout=5000)
             text = await small_element.text_content()
             if text and text.strip():
-                # Try to extract digits
                 digits_only = re.sub(r"\D", "", text)
                 if digits_only:
                     return int(digits_only)
-                # Fallback: check for "100 résultats ou plus"
                 if "100" in text and "résultats" in text:
                     return 100
 
         except Exception as e:
             self.logger.warning(f"Error extracting total offers count: {e}")
     
-        # Return 10 as fallback instead of 100
         return 10
 
-    async def _extract_jobs_from_current_page(self) -> int:  # noqa: C901
-        """Extract job URLs from the current page using LinkedIn's DOM structure."""
+    async def _extract_jobs_urls_and_title_from_current_page(self) -> int:  # noqa: C901
         if not self.page:
             return 0
 
@@ -371,13 +326,8 @@ class LinkedInJobScraper(JobScraperBase):
             self.logger.info(f"Navigation to next page failed: {e}")
             return False
 
+    @log_call()
     async def parse_offers(self) -> List[JobOfferInput]:  # noqa: C901
-        """
-        Extract offers data from the collected URLs using LinkedIn's job detail page structure.
-
-        Returns:
-            List[JobOfferInput]: A list of JobOfferInput objects containing offer details.
-        """
         if not self.page:
             raise RuntimeError("Page not initialized")
 
@@ -418,7 +368,8 @@ class LinkedInJobScraper(JobScraperBase):
                     desc_matches = re.findall(r'<!---->(.*?)<!---->', desc_html, re.DOTALL)
                     # Remove empty/whitespace-only matches
                     desc_matches = [m.strip() for m in desc_matches if m.strip()]
-                    location = desc_matches[0] if len(desc_matches) > 0 else "N/A"
+                    raw_location = desc_matches[0] if len(desc_matches) > 0 else "N/A"
+                    location = raw_location.split(",")[0].strip() if "," in raw_location else raw_location.strip()
                     job_posted_date = desc_matches[1] if len(desc_matches) > 2 else ""
                     job_applications = desc_matches[2] if len(desc_matches) > 3 else ""
                 except Exception as e:
@@ -477,7 +428,7 @@ class LinkedInJobScraper(JobScraperBase):
             pass
         return "N/A"
 
-    @log_success_debug("Successfully handled popups.")
+    @log_call()
     async def _handle_popups(self) -> None:  # noqa: C901
         """
         Handles LinkedIn popups, specifically cookie consent, by rejecting non-essential cookies.
@@ -520,7 +471,6 @@ if __name__ == "__main__":
         exclude_filters=["intern", "stage", "apprenti", "business", "management"],
         notion_client=notion_client,
         debug=True,
-        headless=False,
     )
 
     job_offers = scraper.scrape()
