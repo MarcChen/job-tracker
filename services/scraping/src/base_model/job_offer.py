@@ -311,6 +311,8 @@ class JobOfferInput(BaseModel):
         None  # Optional since it will be auto-generated if not provided
     )
 
+    #TODO : Implement property to automatically generate ID after model instanciation
+
     @field_validator("source")
     @classmethod
     def normalize_source(cls, v: str) -> str:
