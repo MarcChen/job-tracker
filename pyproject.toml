@@ -11,6 +11,7 @@ packages = [
 python = "^3.10"
 selenium = "4.9.1"
 playwright = "^1.48.0"
+playwright-stealth="^2.0.0"
 pydantic = "^2.10.0"
 beautifulsoup4 = "4.12.2"
 lxml = "4.9.3"

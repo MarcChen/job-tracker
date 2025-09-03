@@ -1,4 +1,5 @@
 import asyncio
+import functools
 import logging
 import os
 import random
@@ -7,6 +8,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from playwright.async_api import Browser, Locator, Page, async_playwright
+from playwright_stealth import ALL_EVASIONS_DISABLED_KWARGS, Stealth
 
 from services.scraping.src.base_model.job_offer import (
     JobOffer,
@@ -14,6 +16,20 @@ from services.scraping.src.base_model.job_offer import (
     JobSource,
 )
 from services.storage.src.notion_integration import NotionClient
+
+
+def log_call(level=logging.DEBUG):
+    def decorator(func):
+        @functools.wraps(func)
+        async def wrapper(self, *args, **kwargs):
+            msg = f"calling {func.__name__} (args={args}, kwargs={kwargs})"
+            self.logger.log(level, msg)
+            result = await func(self, *args, **kwargs)
+            return result
+
+        return wrapper
+
+    return decorator
 
 
 class JobScraperBase:
@@ -72,14 +88,19 @@ class JobScraperBase:
     async def _setup_browser(self) -> None:
         """Setup Playwright browser, context, and page with custom user-agent and headers for anti-bot evasion."""
         user_agent = (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "Mozilla/5.0 (X11; Linux x86_64) "
             "AppleWebKit/537.36 (KHTML, like Gecko) "
             "Chrome/114.0.0.0 Safari/537.36"
         )
         extra_headers = {
-            "Accept-Language": "en-US,en;q=0.9",
-            # Add more headers if needed
+            "Accept-Language": "fr-FR,fr;q=0.9",
+            # Ajoutez d'autres en-têtes si nécessaire
         }
+        custom_languages = ("fr-FR", "fr")
+        stealth = Stealth(
+            navigator_languages_override=custom_languages, init_scripts_only=True
+        )
+
         if self.browser is None:
             self._playwright = await async_playwright().start()
             self._browser = await self._playwright.chromium.launch(
@@ -93,6 +114,7 @@ class JobScraperBase:
             user_agent=user_agent,
             extra_http_headers=extra_headers,
         )
+        await stealth.apply_stealth_async(self._context)
         self._page = await self._context.new_page()
 
     async def _cleanup_browser(self) -> None:
@@ -166,6 +188,7 @@ class JobScraperBase:
 
         return False
 
+    @log_call()
     async def filter_already_scraped_offers(  # noqa: C901
         self, notion_client: NotionClient
     ) -> None:
@@ -179,8 +202,7 @@ class JobScraperBase:
             notion_client (NotionClient): The Notion client to use for checking existence.
         """
         if not self._offers_urls:
-            if self.debug:
-                self.logger.debug("No offers to filter - _offers_urls is empty")
+            self.logger.debug("No offers to filter - _offers_urls is empty")
             return
 
         # Extract all IDs from the offers_urls list, filtering out None values
@@ -191,14 +213,12 @@ class JobScraperBase:
                 offer_ids.append(offer_id)
 
         if not offer_ids:
-            if self.debug:
-                self.logger.debug("No valid offer IDs found in _offers_urls")
+            self.logger.debug("No valid offer IDs found in _offers_urls")
             return
 
-        if self.debug:
-            self.logger.debug(
-                f"Checking {len(offer_ids)} offers against Notion database..."
-            )
+        self.logger.debug(
+            f"Checking {len(offer_ids)} offers against Notion database..."
+        )
 
         # Use NotionClient's batch checking method
         existence_results = notion_client._check_multiple_offers_exist(offer_ids)
@@ -224,6 +244,29 @@ class JobScraperBase:
                 f"Filtered out {filtered_count} existing offers. {len(self._offers_urls)} offers remaining."
             )
 
+    @log_call()
+    async def scroll_until_bottom(self, selector: Optional[str] = None) -> None:
+        previous_height = 0
+        while True:
+            if selector:
+                await self.page.evaluate(
+                    f"""
+                    var el = document.querySelector('{selector}');
+                    if (el) el.scrollTop = el.scrollHeight;
+                    """
+                )
+                new_height = await self.page.evaluate(
+                    f"document.querySelector('{selector}') ? document.querySelector('{selector}').scrollHeight : 0"
+                )
+            else:
+                await self.page.evaluate(
+                    "window.scrollTo(0, document.body.scrollHeight)"
+                )
+                new_height = await self.page.evaluate("document.body.scrollHeight")
+            if new_height == previous_height:
+                break
+            previous_height = new_height
+
     def convert_to_job_offer(self, offer_input: JobOfferInput) -> Optional[JobOffer]:
         """
         Convert a JobOfferInput to a validated JobOffer.
@@ -237,11 +280,11 @@ class JobScraperBase:
         try:
             return offer_input.to_job_offer()
         except Exception as e:
-            warnings.warn(f"Failed to convert offer input to JobOffer: {e}")
-            if self.debug:
-                self.logger.debug(f"Problematic offer input: {offer_input}")
+            self.logger.warning(f"Failed to convert offer input to JobOffer: {e}")
+            self.logger.debug(f"Problematic offer input: {offer_input}")
             return None
 
+    @log_call()
     async def save_error_screenshot(self, func_name: str):
         """Save a screenshot with the function name and timestamp."""
         if self._page:
@@ -262,6 +305,7 @@ class JobScraperBase:
         wait_time = random.uniform(min_seconds, max_seconds)
         await asyncio.sleep(wait_time)
 
+    @log_call()
     async def scroll_into_view(self, locator: str) -> None:
         """Scroll an element into view."""
         if self._page:
@@ -402,8 +446,11 @@ class JobScraperBase:
         """
         await self._setup_browser()
         try:
+            self.logger.info(f"Starting scrape for URL: {self.url}")
             await self.extract_all_offers_url()
+            self.logger.info("Filtering already scraped offers")
             await self.filter_already_scraped_offers(self.notion_client)
+            self.logger.info("Parsing offers from page")
             raw_offers = await self.parse_offers()
 
             validated_offers = []

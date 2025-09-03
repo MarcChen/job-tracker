@@ -55,6 +55,7 @@ class JobSource(str, Enum):
     AIR_FRANCE = "Air France"
     APPLE = "Apple"
     WELCOME_TO_THE_JUNGLE = "Welcome to the Jungle"
+    LINKEDIN = "LinkedIn"
     UNKNOWN = "Unknown"  # For cases where the source is not recognized
 
 
@@ -68,6 +69,7 @@ class JobURL(str, Enum):
     # APPLE = "https://jobs.apple.com/fr-fr/search?sort=relevance&location=france-FRAC+singapore-SGP+hong-kong-HKGC+taiwan-TWN"
     APPLE = "https://jobs.apple.com/fr-fr/search?sort=relevance&location=france-FRAC"
     WELCOME_TO_THE_JUNGLE = "https://www.welcometothejungle.com/fr/jobs?&refinementList%5Bcontract_type%5D%5B%5D=full_time&refinementList%5Bcontract_type%5D%5B%5D=temporary&refinementList%5Bcontract_type%5D%5B%5D=freelance"
+    LINKEDIN = "https://www.linkedin.com/jobs/"
 
 
 class ContractType(str, Enum):
@@ -305,9 +307,11 @@ class JobOfferInput(BaseModel):
     reference: Optional[str] = None
     schedule_type: Optional[str] = None
     job_content_description: Optional[str] = None
-    offer_id: Optional[str] = (
-        None  # Optional since it will be auto-generated if not provided
-    )
+    offer_id: Optional[
+        str
+    ] = None  # Optional since it will be auto-generated if not provided
+
+    # TODO : Implement property to automatically generate ID after model instanciation
 
     @field_validator("source")
     @classmethod
