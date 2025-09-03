@@ -347,3 +347,33 @@ This pull request introduces a new utility function, `pre_process_url`, to clean
 
 * [`services/scraping/src/welcome_to_the_jungle.py`](diffhunk://#diff-4c44a5339aa611728faf270908d46effb8a63c1f3c88564378bace2bea3ea089R146-R156): Updated the `extract_all_offers_url` method to dynamically retrieve and log the company name from the webpage. Integrated the `pre_process_url` function to clean URLs before appending them to `_offers_urls` and generating job offer IDs.
 
+## [2.2.0] - 2025-09-03
+- Merged PR #23 by @MarcChen: feat: added linked-in support
+This pull request introduces significant improvements and new features to the job scraping system, most notably adding support for LinkedIn job scraping, enhancing anti-bot evasion, and improving configuration and selection logic for scrapers. The changes also include code quality improvements and updates to workflow scheduling.
+
+**New Scraper Support & Configuration**
+
+* Added LinkedIn job scraper integration, including new scraper IDs (`6`, `7`), configuration entries in `get_scrapers_config`, and updates to selection logic and documentation in `main.py`. (`[[1]](diffhunk://#diff-4605130633ff211a5791caab6bb577c45afca4e901bb904f9d489f96a54693e5R13)`, `[[2]](diffhunk://#diff-91d416149d4ccc5ad3a06eddd4ee240961aee974990387e50656a56a439132b2R50-R67)`, `[[3]](diffhunk://#diff-b10564ab7d2c520cdd0243874879fb0a782862c3c902ab535faabe57d5a505e1L25-R39)`, `[[4]](diffhunk://#diff-b10564ab7d2c520cdd0243874879fb0a782862c3c902ab535faabe57d5a505e1L61-R94)`)
+* Updated `JobSource` and `JobURL` enums to include LinkedIn, enabling consistent referencing throughout the codebase. (`[[1]](diffhunk://#diff-7de339d38b61a17bd8ac80032efc4100f9de0001097df74073053a7a49a3d822R58)`, `[[2]](diffhunk://#diff-7de339d38b61a17bd8ac80032efc4100f9de0001097df74073053a7a49a3d822R72)`)
+
+**Anti-Bot Evasion & Scraper Base Enhancements**
+
+* Integrated `playwright-stealth` for enhanced anti-bot evasion, including custom user-agent, language headers, and stealth mode in the browser setup. (`[[1]](diffhunk://#diff-3aded47079c82ee098ab6f1f984f73bb6190af3cf56916dbd1d0a82793433ac2R11)`, `[[2]](diffhunk://#diff-3aded47079c82ee098ab6f1f984f73bb6190af3cf56916dbd1d0a82793433ac2L75-R103)`, `[[3]](diffhunk://#diff-3aded47079c82ee098ab6f1f984f73bb6190af3cf56916dbd1d0a82793433ac2R117)`, `[[4]](diffhunk://#diff-50c86b7ed8ac2cf95bd48334961bf0530cdc77b5a56f852c5c61b89d735fd711R14)`)
+* Added reusable `log_call` decorator for improved logging of async method calls in the scraper base class, and applied it to key methods for better traceability. (`[[1]](diffhunk://#diff-3aded47079c82ee098ab6f1f984f73bb6190af3cf56916dbd1d0a82793433ac2R21-R34)`, `[[2]](diffhunk://#diff-3aded47079c82ee098ab6f1f984f73bb6190af3cf56916dbd1d0a82793433ac2R191)`, `[[3]](diffhunk://#diff-3aded47079c82ee098ab6f1f984f73bb6190af3cf56916dbd1d0a82793433ac2R247-R269)`, `[[4]](diffhunk://#diff-3aded47079c82ee098ab6f1f984f73bb6190af3cf56916dbd1d0a82793433ac2L240-R287)`, `[[5]](diffhunk://#diff-3aded47079c82ee098ab6f1f984f73bb6190af3cf56916dbd1d0a82793433ac2R308)`)
+* Improved error handling and logging in offer conversion and scraping workflow, replacing warnings with logger calls and adding more informative log messages. (`[[1]](diffhunk://#diff-3aded47079c82ee098ab6f1f984f73bb6190af3cf56916dbd1d0a82793433ac2L240-R287)`, `[[2]](diffhunk://#diff-3aded47079c82ee098ab6f1f984f73bb6190af3cf56916dbd1d0a82793433ac2R449-R453)`, `[[3]](diffhunk://#diff-b10564ab7d2c520cdd0243874879fb0a782862c3c902ab535faabe57d5a505e1L306-R311)`)
+
+**Scraper Selection & Documentation**
+
+* Expanded scraper selection logic to support new LinkedIn scrapers and updated groupings for CDI, tech, data, and AI roles, both in code and CLI documentation. (`[[1]](diffhunk://#diff-b10564ab7d2c520cdd0243874879fb0a782862c3c902ab535faabe57d5a505e1L25-R39)`, `[[2]](diffhunk://#diff-b10564ab7d2c520cdd0243874879fb0a782862c3c902ab535faabe57d5a505e1L61-R94)`)
+* Added new examples and descriptions for LinkedIn scrapers in CLI help output for better user guidance. (`[main.pyL61-R94](diffhunk://#diff-b10564ab7d2c520cdd0243874879fb0a782862c3c902ab535faabe57d5a505e1L61-R94)`)
+
+**Workflow & Scheduling**
+
+* Changed workflow schedule in `.github/workflows/run-container.yml` to run every 4 days instead of every 2, and updated job arguments to use `all` instead of a fixed list. (`[[1]](diffhunk://#diff-9d8fa071698624d0a009b95095bdbb9802888955407a82532e59666535968260L10-R10)`, `[[2]](diffhunk://#diff-9d8fa071698624d0a009b95095bdbb9802888955407a82532e59666535968260L42-R42)`)
+
+**Codebase Quality & Refactoring**
+
+* Refactored offer processing logic with a note to use Python generators for improved memory efficiency, and made minor formatting and code style improvements. (`[[1]](diffhunk://#diff-4605130633ff211a5791caab6bb577c45afca4e901bb904f9d489f96a54693e5R186-R187)`, `[[2]](diffhunk://#diff-7de339d38b61a17bd8ac80032efc4100f9de0001097df74073053a7a49a3d822L308-R314)`)
+
+Let me know if you need a walkthrough of any specific part of these changes!
+
