@@ -32,7 +32,7 @@ def parse_scraper_selection(  # noqa: C901
     elif selection == "apple":
         return ["3"]
     elif selection == "linkedin":
-        return ["6"]
+        return ["6", "7"]
     elif selection in ["data", "data-engineer", "dataengineer"]:
         return ["4", "6"]
     elif selection in ["ai", "artificial-intelligence"]:

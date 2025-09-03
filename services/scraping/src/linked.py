@@ -16,7 +16,7 @@ from services.scraping.src.linked_url_generate import LinkedinUrlGenerate
 from services.storage.src.notion_integration import NotionClient
 
 NUM_JOBS_PER_PAGE = 25
-
+MAX_JOBS_TO_FETCH = 300
 
 
 class LinkedInJobScraper(JobScraperBase):
@@ -121,7 +121,7 @@ class LinkedInJobScraper(JobScraperBase):
 
             await self._detect_dom_structure()
 
-            total_offers = min(await self._get_total_offers_count(), 500)  # noqa: F84
+            total_offers = min(await self._get_total_offers_count(), MAX_JOBS_TO_FETCH)  # noqa: F84
             self.logger.info(
                 f"Total offers found: {total_offers} for keyword '{self.keyword}' and location '{self.location}'"
             )
@@ -339,7 +339,7 @@ class LinkedInJobScraper(JobScraperBase):
                 await self._detect_dom_structure()
                 await self.wait_random(1, 3)
 
-                pattern = r'<!---->([a-zA-Z0-9_, ]*)<!---->'
+                pattern = r'<!---->(.*?)<!---->'
                 # Title
                 try:
                     title_el = self._get_locator("//h1[contains(@class, 't-24 t-bold inline')]").first
@@ -354,7 +354,7 @@ class LinkedInJobScraper(JobScraperBase):
                     company_el = self._get_locator("//div[contains(@class, 'job-details-jobs-unified-top-card__company-name')]").first
                     await company_el.wait_for(timeout=5000)
                     company_html = (await company_el.inner_html()).strip()
-                    company_match = re.search(pattern, company_html)
+                    company_match = re.search(pattern, company_html, re.DOTALL)
                     company = company_match.group(1).strip() if company_match else "N/A"
                 except Exception as e:
                     self.logger.debug(f"Warning in getting jobCompany: {str(e)[:50]}")
@@ -365,8 +365,7 @@ class LinkedInJobScraper(JobScraperBase):
                     desc_el = self._get_locator("//div[contains(@class, 'job-details-jobs-unified-top-card__primary-description-container')]").first
                     await desc_el.wait_for(timeout=5000)
                     desc_html = (await desc_el.inner_html()).strip()
-                    desc_matches = re.findall(r'<!---->(.*?)<!---->', desc_html, re.DOTALL)
-                    # Remove empty/whitespace-only matches
+                    desc_matches = re.findall(pattern, desc_html, re.DOTALL)
                     desc_matches = [m.strip() for m in desc_matches if m.strip()]
                     raw_location = desc_matches[0] if len(desc_matches) > 0 else "N/A"
                     location = raw_location.split(",")[0].strip() if "," in raw_location else raw_location.strip()
@@ -470,6 +469,7 @@ if __name__ == "__main__":
         include_filters=["data", "engineer", "ingénieur", "données", "gcp"],
         exclude_filters=["intern", "stage", "apprenti", "business", "management"],
         notion_client=notion_client,
+        headless=False,
         debug=True,
     )
 
