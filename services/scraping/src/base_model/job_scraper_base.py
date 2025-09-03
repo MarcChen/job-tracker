@@ -243,6 +243,27 @@ class JobScraperBase:
                 f"Filtered out {filtered_count} existing offers. {len(self._offers_urls)} offers remaining."
             )
 
+    @log_call()
+    async def scroll_until_bottom(self, selector: Optional[str] = None) -> None:
+        previous_height = 0
+        while True:
+            if selector:
+                await self.page.evaluate(
+                    f"""
+                    var el = document.querySelector('{selector}');
+                    if (el) el.scrollTop = el.scrollHeight;
+                    """
+                )
+                new_height = await self.page.evaluate(
+                    f"document.querySelector('{selector}') ? document.querySelector('{selector}').scrollHeight : 0"
+                )
+            else:
+                await self.page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                new_height = await self.page.evaluate("document.body.scrollHeight")
+            if new_height == previous_height:
+                break
+            previous_height = new_height
+
     def convert_to_job_offer(self, offer_input: JobOfferInput) -> Optional[JobOffer]:
         """
         Convert a JobOfferInput to a validated JobOffer.
@@ -422,8 +443,11 @@ class JobScraperBase:
         """
         await self._setup_browser()
         try:
+            self.logger.info(f"Starting scrape for URL: {self.url}")
             await self.extract_all_offers_url()
+            self.logger.info("Filtering already scraped offers")
             await self.filter_already_scraped_offers(self.notion_client)
+            self.logger.info("Parsing offers from page")
             raw_offers = await self.parse_offers()
 
             validated_offers = []

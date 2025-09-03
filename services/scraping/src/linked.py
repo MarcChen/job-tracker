@@ -15,17 +15,15 @@ from services.scraping.src.base_model.job_scraper_base import JobScraperBase, lo
 from services.scraping.src.linked_url_generate import LinkedinUrlGenerate
 from services.storage.src.notion_integration import NotionClient
 
-NUM_JOBS_PER_PAGE = 25
 MAX_JOBS_TO_FETCH = 300
+OFFER_PER_CLICK = 10
 
 
 class LinkedInJobScraper(JobScraperBase):
-    """LinkedIn Job Scraper using Playwright and Pydantic models."""
-
     def __init__(
         self,
         notion_client: NotionClient,
-        url: str = "https://www.linkedin.com/",
+        url: str = "https://www.linkedin.com/jobs",
         keyword: str = "",
         location: str = "",
         include_filters: Optional[List[str]] = None,
@@ -59,7 +57,6 @@ class LinkedInJobScraper(JobScraperBase):
         else:
             return self.page.locator(selector)
 
-    @log_call()
     async def _detect_dom_structure(self) -> bool:
         if not self.page:
             return False
@@ -96,7 +93,6 @@ class LinkedInJobScraper(JobScraperBase):
         # Default fallback
         self._use_iframe = False
         self._iframe_locator = None
-        self.logger.debug("Using default page DOM structure")
         return False
 
     async def extract_all_offers_url(self) -> None:  # noqa: C901
@@ -107,18 +103,15 @@ class LinkedInJobScraper(JobScraperBase):
             raise RuntimeError("Page not initialized")
 
         try:
-            await self.page.goto(self.url)
-            await self.wait_random(2, 4)
-            await self._handle_popups()
-            await self.login()
-
             url_generator = LinkedinUrlGenerate(
                 keyword=self.keyword,
                 location=self.location,
             )
             await self.page.goto(url_generator.generate_url_link())
             await self.wait_random(2, 4)
-
+            await self._handle_popups()
+            await self.accept_cookies()
+            
             await self._detect_dom_structure()
 
             total_offers = min(await self._get_total_offers_count(), MAX_JOBS_TO_FETCH)  # noqa: F84
@@ -126,33 +119,34 @@ class LinkedInJobScraper(JobScraperBase):
                 f"Total offers found: {total_offers} for keyword '{self.keyword}' and location '{self.location}'"
             )
 
-            total_pages = (total_offers // NUM_JOBS_PER_PAGE) + (1 if total_offers % NUM_JOBS_PER_PAGE else 0)
-
-            # Navigate through pages and collect offer URLs
-            for page in range(total_pages):
+            # Load all offers 
+            loaded_offers = 0
+            while loaded_offers < total_offers:
                 try:
                     await self._detect_dom_structure()
+                    await self._get_locator("ul.jobs-search__results-list").wait_for(timeout=5000)
+                    await self.scroll_until_bottom()
 
-                    await self._get_locator(
-                        "//li[@data-occludable-job-id]"
-                    ).first.wait_for(timeout=10000)
-
-                    
-                    await self.wait_random(1, 2)
-
-                    current_page_offers = await self._extract_jobs_urls_and_title_from_current_page()
-
-                    if current_page_offers == 0:
-                        self.logger.warning("No offers found on current page, stopping")
+                    try:
+                        see_more_button = self.page.locator("button.infinite-scroller__show-more-button.infinite-scroller__show-more-button--visible")
+                        await see_more_button.wait_for(state="visible", timeout=10000)
+                        await see_more_button.scroll_into_view_if_needed()
+                        await self.wait_random(0.1, 0.6)
+                        await see_more_button.click()
+                    except Exception as e:
+                        self.logger.debug(f"See more button not found or not clickable: {e}")
                         break
 
-                    if not await self._navigate_to_next_page():
-                        self.logger.info("No more pages available")
+                    loaded_offers += OFFER_PER_CLICK
+
+                    if loaded_offers >= MAX_JOBS_TO_FETCH:
                         break
 
                 except Exception as e:
-                    self.logger.error(f"Error loading page {page}: {e}")
+                    self.logger.error(f"Error scrolling through all jobs : {e}")
                     break
+
+            await self._extract_jobs_urls_and_title_from_current_page()
 
         except Exception as e:
             raise ValueError(f"Error loading offers: {str(e)}")
@@ -160,85 +154,12 @@ class LinkedInJobScraper(JobScraperBase):
         self.logger.info("Finished loading all available offers.")
         self.logger.info(f"Total URLs collected: {len(self._offers_urls)}")
 
-    @log_call()
-    async def login(self) -> None:
-        if not self.page:
-            return
-        
-        email = os.getenv("LINKEDIN_EMAIL")
-        password = os.getenv("LINKEDIN_PASSWORD")
-        if not email or not password:
-            self.logger.error(
-                "LinkedIn email or password env vars not set. Skipping login."
-            )
-            raise RuntimeError(
-                "LinkedIn email or password not set in environment variables."
-            )
-        
-        try:
-            current_url = self.page.url
-            if "/login" not in current_url:
-                sign_in_button = self.page.locator('a[data-test-id="home-hero-sign-in-cta"]')
-                if await sign_in_button.count() > 0:
-                    await sign_in_button.click()
-                    await self.wait_random(2, 3)
-                else:
-                    await self.page.goto("https://www.linkedin.com/login")
-                    await self.wait_random(2, 3)
-            
-            await self.page.wait_for_selector('#username', timeout=10000)
-            
-            email_input = self.page.locator('#username')
-            await email_input.fill(email)
-            await self.wait_random(0.5, 1)
-            
-            password_input = self.page.locator('#password')
-            await password_input.fill(password)
-            await self.wait_random(0.5, 1)
-            
-            submit_button = self.page.locator('button.btn__primary--large[data-litms-control-urn="login-submit"][type="submit"]')
-            if await submit_button.count() > 0 and await submit_button.is_visible():
-                await submit_button.click()
-            else:
-                await password_input.press("Enter")
-            
-            await self.wait_random(3, 5)
-            
-            try:
-                await self.page.wait_for_function(
-                    """() => {
-                        return window.location.pathname !== '/login' || 
-                               document.querySelector('.form__label--error:not(.hidden__imp)') !== null
-                    }""",
-                    timeout=10000
-                )
-                
-                error_elements = self.page.locator('.form__label--error:not(.hidden__imp)')
-                if await error_elements.count() > 0:
-                    error_text = await error_elements.first.text_content()
-                    self.logger.error(f"LinkedIn login failed: {error_text}")
-                    raise RuntimeError(f"LinkedIn login failed: {error_text}")
-                
-                if "/login" in self.page.url:
-                    self.logger.warning("Still on login page after submission - login may have failed")
-                else:
-                    self.logger.info("LinkedIn login successful")
-                    
-            except Exception as e:
-                self.logger.warning(f"Could not verify login status: {e}")
-                
-            await self.wait_random(4, 5)
-
-        except Exception as e:
-            self.logger.error(f"Error during LinkedIn login: {e}")
-            raise RuntimeError(f"LinkedIn login failed: {e}")
-
     async def _get_total_offers_count(self) -> int:
         """Extract total offers count from LinkedIn's results header."""
         if not self.page:
             return 10
         try:
-            small_element = self._get_locator('//small').first
+            small_element = self._get_locator('span.results-context-header__job-count').first
             await small_element.wait_for(timeout=5000)
             text = await small_element.text_content()
             if text and text.strip():
@@ -253,6 +174,22 @@ class LinkedInJobScraper(JobScraperBase):
     
         return 10
 
+    async def accept_cookies(self) -> None:
+        """Accept LinkedIn cookies if the consent banner is present."""
+        if not self.page:
+            return
+        try:
+            accept_btn = self.page.locator(
+                "button.artdeco-global-alert-action.artdeco-button.artdeco-button--inverse.artdeco-button--2.artdeco-button--primary[data-tracking-control-name='ga-cookie.consent.accept.v4']"
+            )
+            if await accept_btn.count() > 0 and await accept_btn.is_visible():
+                await accept_btn.click()
+                await self.wait_random(1, 2)
+                self.logger.debug("Clicked LinkedIn cookie consent accept button.")
+        except Exception as e:
+            self.logger.debug(f"Cookie consent accept button not found or error clicking: {e}")
+
+
     async def _extract_jobs_urls_and_title_from_current_page(self) -> int:  # noqa: C901
         if not self.page:
             return 0
@@ -260,19 +197,17 @@ class LinkedInJobScraper(JobScraperBase):
         current_page_offers = 0
 
         try:
-            job_items = self._get_locator("li[data-occludable-job-id]")
+            job_items = self._get_locator("li:has(> div.base-card)")
             job_count = await job_items.count()
 
             for i in range(job_count):
                 try:
                     job_item = job_items.nth(i)
 
-                    title_link = job_item.locator("a.job-card-container__link").first
+                    title_link = job_item.locator("a.base-card__full-link").first
 
                     if await title_link.count() > 0:
-                        job_title_element = title_link.locator(
-                            "span[aria-hidden='true'] strong"
-                        )
+                        job_title_element = title_link.locator("span.sr-only")
                         job_title = await self._safe_get_locator_text(
                             job_title_element, "N/A"
                         )
@@ -337,12 +272,12 @@ class LinkedInJobScraper(JobScraperBase):
             try:
                 await self.page.goto(offer["url"])
                 await self._detect_dom_structure()
+                await self._handle_popups()
                 await self.wait_random(1, 3)
 
-                pattern = r'<!---->(.*?)<!---->'
                 # Title
                 try:
-                    title_el = self._get_locator("//h1[contains(@class, 't-24 t-bold inline')]").first
+                    title_el = self._get_locator("//h1[contains(@class, 'top-card-layout__title')]").first
                     await title_el.wait_for(timeout=5000)
                     title = (await title_el.inner_html()).strip()
                 except Exception as e:
@@ -351,35 +286,25 @@ class LinkedInJobScraper(JobScraperBase):
 
                 # Company
                 try:
-                    company_el = self._get_locator("//div[contains(@class, 'job-details-jobs-unified-top-card__company-name')]").first
+                    company_el = self._get_locator("//a[contains(@class, 'topcard__org-name-link')]").first
                     await company_el.wait_for(timeout=5000)
-                    company_html = (await company_el.inner_html()).strip()
-                    company_match = re.search(pattern, company_html, re.DOTALL)
-                    company = company_match.group(1).strip() if company_match else "N/A"
+                    company = (await company_el.inner_text()).strip()
                 except Exception as e:
                     self.logger.debug(f"Warning in getting jobCompany: {str(e)[:50]}")
                     company = "N/A"
 
-                # Location, Posted Date, Applications
+                # Location
                 try:
-                    desc_el = self._get_locator("//div[contains(@class, 'job-details-jobs-unified-top-card__primary-description-container')]").first
-                    await desc_el.wait_for(timeout=5000)
-                    desc_html = (await desc_el.inner_html()).strip()
-                    desc_matches = re.findall(pattern, desc_html, re.DOTALL)
-                    desc_matches = [m.strip() for m in desc_matches if m.strip()]
-                    raw_location = desc_matches[0] if len(desc_matches) > 0 else "N/A"
-                    location = raw_location.split(",")[0].strip() if "," in raw_location else raw_location.strip()
-                    job_posted_date = desc_matches[1] if len(desc_matches) > 2 else ""
-                    job_applications = desc_matches[2] if len(desc_matches) > 3 else ""
+                    location_el = self._get_locator("//span[contains(@class, 'topcard__flavor') and contains(@class, 'topcard__flavor--bullet')]").first
+                    await location_el.wait_for(timeout=5000)
+                    location = (await location_el.inner_text()).strip()
                 except Exception as e:
-                    self.logger.debug(f"Warning in getting jobDesc: {str(e)[:50]}")
+                    self.logger.debug(f"Warning in getting location: {str(e)[:50]}")
                     location = "N/A"
-                    job_posted_date = ""
-                    job_applications = ""
 
                 # Description
                 try:
-                    desc_full_el = self._get_locator("//div[contains(@class, 'jobs-description-content__text')]").first
+                    desc_full_el = self._get_locator("//div[contains(@class, 'description__text') and contains(@class, 'description__text--rich')]").first
                     await desc_full_el.wait_for(timeout=5000)
                     description = (await desc_full_el.inner_text()).strip()
                 except Exception as e:
@@ -429,31 +354,18 @@ class LinkedInJobScraper(JobScraperBase):
 
     @log_call()
     async def _handle_popups(self) -> None:  # noqa: C901
-        """
-        Handles LinkedIn popups, specifically cookie consent, by rejecting non-essential cookies.
-        """
         if not self.page:
             return
-
         try:
-            # Wait for the global alert container (cookie consent popup)
-            popup_container = self.page.locator("#artdeco-global-alert-container")
-            if await popup_container.count() > 0:
-                # Look for the Reject button inside the popup
-                reject_button = popup_container.locator(
-                    "button[data-tracking-control-name='ga-cookie.consent.deny.v4'], button[data-control-name='ga-cookie.consent.deny.v4']"
-                )
-                if await reject_button.count() > 0 and await reject_button.is_visible():
-                    await reject_button.click()
-                    await self.wait_random(0.5, 1.5)
-                    self.logger.info("Rejected LinkedIn cookie consent popup.")
-                else:
-                    self.logger.info("Reject button not found in cookie consent popup.")
-            else:
-                self.logger.info("No cookie consent popup detected.")
+            btns = self.page.locator("//button[contains(@class, 'modal__dismiss') and contains(@class, 'btn-tertiary')]")
+            count = await btns.count()
+            for i in range(count):
+                btn = btns.nth(i)
+                if await btn.is_visible():
+                    await btn.click()
+                    await self.wait_random(1, 2)
         except Exception as e:
-            self.logger.warning(f"Error handling popups: {e}")
-
+            self.logger.debug(f"No popup to dismiss or error handling popup: {e}")
 
 if __name__ == "__main__":
 
@@ -469,8 +381,8 @@ if __name__ == "__main__":
         include_filters=["data", "engineer", "ingénieur", "données", "gcp"],
         exclude_filters=["intern", "stage", "apprenti", "business", "management"],
         notion_client=notion_client,
-        headless=False,
-        debug=True,
+        # headless=False,
+        # debug=True,
     )
 
     job_offers = scraper.scrape()
