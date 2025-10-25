@@ -120,9 +120,9 @@ def test_notion_format():
         f"Offer ID in Notion format: {notion_data['Offer ID']['rich_text'][0]['text']['content']}"
     )
     assert "Offer ID" in notion_data, "Notion format should include Offer ID"
-    assert (
-        notion_data["Offer ID"]["rich_text"][0]["text"]["content"] == job.offer_id
-    ), "Notion format should match job offer_id"
+    assert notion_data["Offer ID"]["rich_text"][0]["text"]["content"] == job.offer_id, (
+        "Notion format should match job offer_id"
+    )
 
     print("✅ Notion format tests passed!")
 
@@ -143,9 +143,9 @@ def test_legacy_format():
 
     print(f"Offer ID in legacy format: {legacy_data['Offer ID']}")
     assert "Offer ID" in legacy_data, "Legacy format should include Offer ID"
-    assert (
-        legacy_data["Offer ID"] == job.offer_id
-    ), "Legacy format should match job offer_id"
+    assert legacy_data["Offer ID"] == job.offer_id, (
+        "Legacy format should match job offer_id"
+    )
 
     print("✅ Legacy format tests passed!")
 

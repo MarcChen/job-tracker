@@ -1,7 +1,6 @@
 import logging
 import os
 import re
-import warnings
 from datetime import datetime
 from typing import List, Optional
 
@@ -76,7 +75,7 @@ class LinkedInJobScraper(JobScraperBase):
                     self._use_iframe = True
                     self.logger.debug("Detected iframe DOM structure")
                     return True
-                except:
+                except Exception:
                     pass
 
             test_selector = "li[data-occludable-job-id], .jobs-search-box, .job-details-jobs-unified-top-card__container"
@@ -86,7 +85,7 @@ class LinkedInJobScraper(JobScraperBase):
                 self._iframe_locator = None
                 self.logger.debug("Detected direct page DOM structure")
                 return True
-            except:
+            except Exception:
                 pass
 
         except Exception as e:
@@ -116,9 +115,7 @@ class LinkedInJobScraper(JobScraperBase):
 
             await self._detect_dom_structure()
 
-            total_offers = min(
-                await self._get_total_offers_count(), MAX_JOBS_TO_FETCH
-            )  # noqa: F84
+            total_offers = min(await self._get_total_offers_count(), MAX_JOBS_TO_FETCH)  # noqa: F84
             self.logger.info(
                 f"Total offers found: {total_offers} for keyword '{self.keyword}' and location '{self.location}'"
             )
@@ -270,6 +267,8 @@ class LinkedInJobScraper(JobScraperBase):
                 await next_button.click()
                 await self.wait_random(2, 4)
                 return True
+            else:
+                return False
         except Exception as e:
             self.logger.info(f"Navigation to next page failed: {e}")
             return False
@@ -363,7 +362,6 @@ class LinkedInJobScraper(JobScraperBase):
     def _extract_job_reference(self, url: str) -> str:
         """Extract job ID/reference from LinkedIn URL."""
         try:
-
             # LinkedIn job URLs follow pattern: /jobs/view/4254887139/...
             job_id_match = re.search(r"/jobs/view/(\d+)", url)
             if job_id_match:
@@ -391,7 +389,6 @@ class LinkedInJobScraper(JobScraperBase):
 
 
 if __name__ == "__main__":
-
     DATABASE_ID = os.getenv("DATABASE_ID")
     NOTION_API = os.getenv("NOTION_API")
     assert DATABASE_ID, "DATABASE_ID environment variable is not set."

@@ -1,34 +1,71 @@
-[tool.poetry]
-name = "Job scrappers"
+[project]
+name = "job-scrappers"
 version = "2.0.0"
 description = "A package to scrap job offers, send SMS notifications through a free SMS API, and transfer data to a Notion DB."
-authors = ["Marc <128506536+MarcChen@users.noreply.github.com>"]
-packages = [
-    { include = "services" }
+authors = [
+    { name = "Marc", email = "128506536+MarcChen@users.noreply.github.com" }
+]
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }  # Add your license type
+
+dependencies = [
+    "selenium==4.9.1",
+    "playwright>=1.48.0",
+    "playwright-stealth>=2.0.0",
+    "pydantic>=2.10.0",
+    "beautifulsoup4==4.12.2",
+    "lxml==4.9.3",
+    "requests==2.31.0",
+    "rich==13.5.2",
+    "notion-client==2.3.0",
 ]
 
-[tool.poetry.dependencies]
-python = "^3.10"
-selenium = "4.9.1"
-playwright = "^1.48.0"
-playwright-stealth="^2.0.0"
-pydantic = "^2.10.0"
-beautifulsoup4 = "4.12.2"
-lxml = "4.9.3"
-requests = "2.31.0"
-rich = "13.5.2"
-notion-client= "2.3.0"
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.1",
+    "flake8>=7.1.1",
+    "ruff>=0.14.2",
+    "isort>=6.0.0",
+    "pre-commit>=4.2.0",
+]
 
-[tool.poetry.group.dev.dependencies]
-pytest = "^7.0.1"
-flake8 = "^7.1.1"
-black = "^22.3.0"
-isort = "^6.0.0"
-pre-commit = "^4.2.0"
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=7.0.1",
+    "flake8>=7.1.1",
+    "ruff>=0.14.2",
+    "isort>=6.0.0",
+    "pre-commit>=4.2.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["services"]
 
 [tool.isort]
 profile = "black"
 
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+[tool.ruff]
+line-length = 88
+
+[tool.flake8]
+max-line-length = 88
+extend-ignore = ["E203", "W503", "E501"]
+exclude = [
+    ".git",
+    "__pycache__",
+    ".venv",
+    ".env",
+    "build",
+    "dist",
+    "*.egg-info",
+]
+max-complexity = 10
+
+[tool.pytest.ini_options]
+testpaths = ["tests/unit"]
+pythonpath = ["src"]
