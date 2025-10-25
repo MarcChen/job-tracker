@@ -8,7 +8,7 @@ from rich.progress import Progress
 from services.notifications.sms_alert import SMSAPI
 from services.scraping.src.airfrance import AirFranceJobScraper
 from services.scraping.src.apple import AppleJobScraper
-from services.scraping.src.base_model.job_offer import JobOffer
+from services.scraping.src.base_model.job_offer import JobOffer, JobSource
 from services.scraping.src.config import get_scrapers_config
 from services.scraping.src.linked import LinkedInJobScraper
 from services.scraping.src.vie import VIEJobScraper
@@ -55,12 +55,12 @@ class OfferProcessor:
         """
         FREE_MOBILE_USER_ID = os.getenv("FREE_MOBILE_USER_ID")
         FREE_MOBILE_API_KEY = os.getenv("FREE_MOBILE_API_KEY")
-        assert (
-            FREE_MOBILE_USER_ID
-        ), "FREE_MOBILE_USER_ID environment variable is not set."
-        assert (
-            FREE_MOBILE_API_KEY
-        ), "FREE_MOBILE_API_KEY environment variable is not set."
+        assert FREE_MOBILE_USER_ID, (
+            "FREE_MOBILE_USER_ID environment variable is not set."
+        )
+        assert FREE_MOBILE_API_KEY, (
+            "FREE_MOBILE_API_KEY environment variable is not set."
+        )
 
         self.notion_client = notion_client
         self.sms_client = SMSAPI(FREE_MOBILE_USER_ID, FREE_MOBILE_API_KEY)
@@ -254,27 +254,19 @@ class OfferProcessor:
 
     def _process_new_offer(self, offer: JobOffer, progress, task):
         """Process a new offer that doesn't exist in the database."""
-        if offer.source == "Business France":
+        if offer.source not in [JobSource.LINKEDIN, JobSource.WELCOME_TO_THE_JUNGLE]:
             sms_message = (
-                f"New VIE Job Alert!\n"
+                f"New offer from {offer.source}\n"
                 f"Title: {offer.title}\n"
                 f"Company: {offer.company}\n"
                 f"Location: {offer.location}\n"
-                f"Duration: {offer.duration}\n"
+                if offer.location
+                else f"Duration: {offer.duration}\n"
+                if offer.duration
+                else ""
             )
-        else:
-            sms_message = (
-                f"CDI Job Alert!\n"
-                f"Title: {offer.title}\n"
-                f"Company: {offer.company}\n"
-                f"Source: {offer.source}\n"
-                f"Location: {offer.location}\n"
-                f"Contract Type: {offer.contract_type}\n"
-                f"URL: {offer.url}\n"
-            )
-
-        self.sms_client.send_sms(sms_message)
-        time.sleep(10)
+            self.sms_client.send_sms(sms_message)
+            time.sleep(5)
 
         # Use the JobOffer's built-in Notion format conversion
         result = self.notion_client.create_page_from_job_offer(offer)
