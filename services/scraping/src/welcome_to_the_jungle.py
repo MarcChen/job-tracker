@@ -135,7 +135,6 @@ class WelcomeToTheJungleJobScraper(JobScraperBase):
                                 include_filters=self.include_filters,
                                 exclude_filters=self.exclude_filters,
                             ):
-
                                 href = await title_link.get_attribute("href")
                                 if href:
                                     # Make sure URL is absolute

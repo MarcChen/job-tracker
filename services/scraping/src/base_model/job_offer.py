@@ -307,9 +307,9 @@ class JobOfferInput(BaseModel):
     reference: Optional[str] = None
     schedule_type: Optional[str] = None
     job_content_description: Optional[str] = None
-    offer_id: Optional[
-        str
-    ] = None  # Optional since it will be auto-generated if not provided
+    offer_id: Optional[str] = (
+        None  # Optional since it will be auto-generated if not provided
+    )
 
     # TODO : Implement property to automatically generate ID after model instanciation
 

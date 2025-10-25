@@ -308,7 +308,9 @@ if __name__ == "__main__":  # noqa: C901
         logger.error(f"[red]❌ Configuration error: {e}[/red]", extra={"markup": True})
         exit(1)
     except Exception as e:
-        logger.error(f"[red]❌ Error during workflow: {e}[/red]", extra={"markup": True})
+        logger.error(
+            f"[red]❌ Error during workflow: {e}[/red]", extra={"markup": True}
+        )
         if args.debug:
             import traceback
 
