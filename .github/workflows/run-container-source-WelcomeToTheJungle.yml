@@ -1,5 +1,8 @@
 name: Run job-tracker - source 4 - Welcome to the Jungle (Data Engineer)
 
+permissions:
+  contents: read
+
 on:
   workflow_dispatch:
   schedule:

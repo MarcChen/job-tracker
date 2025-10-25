@@ -1,5 +1,8 @@
 name: Run job-tracker - source 2 - Air France
 
+permissions:
+  contents: read
+
 on:
   workflow_dispatch:
   schedule:
