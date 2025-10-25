@@ -377,3 +377,7 @@ This pull request introduces significant improvements and new features to the jo
 
 Let me know if you need a walkthrough of any specific part of these changes!
 
+## [2.2.1] - 2025-10-25
+- Merged PR #24 by @MarcChen: Chore/update actions and alert notifications
+
+
