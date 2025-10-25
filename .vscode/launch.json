@@ -1,0 +1,16 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Debug with Poetry Env",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "env": {},
+            "envFile": "${workspaceFolder}/.env",
+            "python": "/home/kemar/.cache/pypoetry/virtualenvs/job_scrappers-38unqWjM-py3.10/bin/python",
+            "justMyCode": false
+        }
+    ]
+}
