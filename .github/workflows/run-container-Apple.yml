@@ -1,0 +1,37 @@
+name: Run job-tracker - source 3 - Apple
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 12 */14 * *' # example: run every 14 days at 12:00
+
+jobs:
+  run-container:
+    runs-on: self-hosted
+
+    steps:
+      - name: Check if job-tracker image exists
+        id: check-image
+        run: |
+          if docker image inspect job-tracker:latest &>/dev/null; then
+            echo "image_exists=true" >> $GITHUB_OUTPUT
+            echo "✅ Image job-tracker:latest exists"
+          else
+            echo "image_exists=false" >> $GITHUB_OUTPUT
+            echo "❌ Image job-tracker:latest does not exist"
+          fi
+
+      - name: Run container for source 3 - Apple
+        if: steps.check-image.outputs.image_exists == 'true'
+        env:
+          NOTION_API: ${{ secrets.NOTION_API }}
+          DATABASE_ID: ${{ secrets.DATABASE_ID }}
+          FREE_MOBILE_USER_ID: ${{ secrets.FREE_MOBILE_USER_ID }}
+          FREE_MOBILE_API_KEY: ${{ secrets.FREE_MOBILE_API_KEY }}
+        run: |
+          docker run -e NOTION_API=$NOTION_API \
+                     -e DATABASE_ID=$DATABASE_ID \
+                     -e FREE_MOBILE_USER_ID=$FREE_MOBILE_USER_ID \
+                     -e FREE_MOBILE_API_KEY=$FREE_MOBILE_API_KEY \
+                     --rm \
+                     job-tracker:latest 3

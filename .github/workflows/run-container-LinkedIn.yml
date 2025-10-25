@@ -1,15 +1,9 @@
-name: Run job-tracker App
+name: Run job-tracker - source 7 - LinkedIn (Data science)
 
 on:
-  workflow_run:
-    workflows: ["Versioning, Tagging, and Docker Image Push"]
-    types:
-      - completed
   workflow_dispatch:
   schedule:
-    - cron: '30 9 */4 * *'
-      branches:
-        - main
+    - cron: '0 10 2 */1 *' # monthly on day 2 at 10:00
 
 jobs:
   run-container:
@@ -26,7 +20,8 @@ jobs:
             echo "image_exists=false" >> $GITHUB_OUTPUT
             echo "❌ Image job-tracker:latest does not exist"
           fi
-      - name: Run the container
+
+      - name: Run container for source 7 - LinkedIn (Data science)
         if: steps.check-image.outputs.image_exists == 'true'
         env:
           NOTION_API: ${{ secrets.NOTION_API }}
@@ -39,4 +34,4 @@ jobs:
                      -e FREE_MOBILE_USER_ID=$FREE_MOBILE_USER_ID \
                      -e FREE_MOBILE_API_KEY=$FREE_MOBILE_API_KEY \
                      --rm \
-                     job-tracker:latest all \
+                     job-tracker:latest 6, 7
