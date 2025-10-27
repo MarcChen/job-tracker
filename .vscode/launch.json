@@ -9,7 +9,7 @@
             "console": "integratedTerminal",
             "env": {},
             "envFile": "${workspaceFolder}/.env",
-            "python": "/home/kemar/.cache/pypoetry/virtualenvs/job_scrappers-38unqWjM-py3.10/bin/python",
+            "python": "${workspaceFolder}/.venv/bin/python",
             "justMyCode": false
         }
     ]
