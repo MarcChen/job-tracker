@@ -3,17 +3,27 @@ FROM mcr.microsoft.com/playwright/python:v1.51.0-noble
 
 WORKDIR /app
 
-# Install Poetry
-RUN pip install --no-cache-dir poetry
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+# Copy pyproject.toml first for better caching
+COPY pyproject.toml .
+
+# Create virtual environment
+RUN uv venv /opt/venv
+
+# Set environment variables to use the virtual environment
+ENV VIRTUAL_ENV=/opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Install dependencies from pyproject.toml
+RUN uv pip install -r pyproject.toml
 
 # Copy application code first (needed for Poetry to find the services package)
 COPY . .
 
-# Configure Poetry: Don't create virtual env since we're in container
-RUN poetry config virtualenvs.create false
-
-# Install dependencies using Poetry
-RUN poetry install --without dev --no-interaction --no-ansi && playwright install --with-deps chromium
+# Install Playwright browsers
+RUN playwright install --with-deps chromium
 
 # Set up non-root user for security with playwright requirements
 RUN groupadd -r pptruser && useradd -r -g pptruser -G audio,video pptruser \
