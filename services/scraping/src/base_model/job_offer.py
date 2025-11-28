@@ -4,7 +4,7 @@ Pydantic models for job offers with validation and serialization.
 
 import hashlib
 from datetime import datetime
-from enum import Enum, StrEnum, auto
+from enum import Enum, auto
 from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -48,7 +48,7 @@ def pre_process_url(url: str) -> str:
     return url
 
 
-class JobSource(StrEnum):
+class JobSource(str, Enum):
     """Enumeration of job sources."""
 
     BUSINESS_FRANCE = auto()
