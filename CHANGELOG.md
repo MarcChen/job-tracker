@@ -381,3 +381,7 @@ Let me know if you need a walkthrough of any specific part of these changes!
 - Merged PR #24 by @MarcChen: Chore/update actions and alert notifications
 
 
+## [2.2.2] - 2025-11-28
+- Merged PR #25 by @MarcChen: Fix/buisness france UI update
+
+
