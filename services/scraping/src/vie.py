@@ -202,7 +202,7 @@ if __name__ == "__main__":
         )
 
     scraper = VIEJobScraper(
-        url="https://mon-vie-via.businessfrance.fr/offres/recherche?query=Data%20Engineer",
+        url="https://mon-vie-via.businessfrance.fr/offres/recherche?query&specializationsIds=212&specializationsIds=24&geographicZones=2&geographicZones=4&teletravail=0&porteEnv=0",
         include_filters=["data", "engineer", "software"],
         exclude_filters=["intern", "stage"],
         notion_client=notion_client,

@@ -63,7 +63,9 @@ class JobURL(str, Enum):
     """Enumeration of job source URLs."""
 
     BUSINESS_FRANCE = (
-        "https://mon-vie-via.businessfrance.fr/offres/recherche?query=Data"
+        "https://mon-vie-via.businessfrance.fr/offres/recherche"
+        "?query&specializationsIds=212&specializationsIds=24"
+        "&geographicZones=2&geographicZones=4&teletravail=0&porteEnv=0"
     )
     AIR_FRANCE = "https://recrutement.airfrance.com/offre-de-emploi/liste-offres.aspx"
     # APPLE = "https://jobs.apple.com/fr-fr/search?sort=relevance&location=france-FRAC+singapore-SGP+hong-kong-HKGC+taiwan-TWN"
