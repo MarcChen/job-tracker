@@ -72,7 +72,9 @@ def get_default_filters() -> tuple:
     """Get default include and exclude filters."""
     default_include = [
         "data engineer",
+        "data analyst",
         "data scientist",
+        "data science",
         "machine learning",
         "artificial intelligence",
         "big data",
@@ -89,8 +91,38 @@ def get_default_filters() -> tuple:
         "data mining",
         "predictive modeling",
         "language processing",
+        "mlops",
+        "llm",
+        "generative",
+        "nlp",
+        "reinforcement learning",
+        "forward deployed",
+        "forward-deployed",
+        "operational research",
+        "operations research",
+        "recherche opérationnelle",
+        "optimization",
+        "optimisation",
     ]
 
-    default_exclude = ["stage", "intern", "apprenti", "apprentice", "alternance"]
+    default_exclude = [
+        "stage",
+        "stages",
+        "stagiaire",
+        "stagiaires",
+        "intern",
+        "interns",
+        "internship",
+        "internships",
+        "apprenti",
+        "apprentissage",
+        "apprentice",
+        "apprenticeship",
+        "alternance",
+        "alternant",
+        "alternants",
+        "business developer",
+        "développeur commercial",
+    ]
 
     return default_include, default_exclude

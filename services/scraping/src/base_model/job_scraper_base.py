@@ -3,6 +3,7 @@ import functools
 import logging
 import os
 import random
+import re
 import warnings
 from datetime import datetime
 from typing import List, Optional
@@ -177,14 +178,20 @@ class JobScraperBase:
             )
             return True
 
-        # Check exclusion filters - skip if job title matches any exclude filter
-        if active_exclude_filters and any(
-            keyword.lower() in job_title.lower() for keyword in active_exclude_filters
-        ):
-            self.logger.debug(
-                f"Skipping offer '{job_title}' (matches exclude filters: {active_exclude_filters})..."
+        # Word-boundary exclude match: plain substring "intern" also hits "International"
+        if active_exclude_filters:
+            excluded = any(
+                re.search(
+                    rf"\b{re.escape(keyword.lower())}\b",
+                    job_title.lower(), re.IGNORECASE,
+                )
+                for keyword in active_exclude_filters
             )
-            return True
+            if excluded:
+                self.logger.debug(
+                    f"Skipping offer '{job_title}' (matches exclude filters: {active_exclude_filters})..."
+                )
+                return True
 
         return False
 
